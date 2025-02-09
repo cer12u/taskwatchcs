@@ -14,18 +14,29 @@
 
         <!-- Top Pane: Task List -->
         <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" Margin="10">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ListBox x:Name="TaskList" Margin="5">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border BorderBrush="#DDDDDD" 
-                                    BorderThickness="1" 
-                                    CornerRadius="4" 
-                                    Margin="0,5"
-                                    Padding="10"
-                                    Background="#F8F8F8">
-                                <StackPanel>
-                                    <!-- Task Panel -->
+            <DockPanel>
+                <!-- Add Task Button -->
+                <Button DockPanel.Dock="Top"
+                        Content="新規タスク追加"
+                        Height="40"
+                        Margin="5"
+                        Click="AddTask_Click"
+                        HorizontalAlignment="Right"
+                        Padding="20,0"/>
+
+                <!-- Task List -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ListBox x:Name="TaskList" 
+                            Margin="5"
+                            HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#DDDDDD" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4" 
+                                        Margin="0,5"
+                                        Padding="10"
+                                        Background="#F8F8F8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -53,12 +64,12 @@
                                                 Padding="10,5"
                                                 Click="DeleteTask_Click"/>
                                     </Grid>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </ScrollViewer>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </ScrollViewer>
+            </DockPanel>
         </Border>
 
         <!-- Bottom Pane: Stopwatch -->
