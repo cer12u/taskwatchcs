@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:TaskManager"
         mc:Ignorable="d"
         Title="タスク管理" Height="600" Width="800"
+        Topmost="True"
         Closing="Window_Closing">
     <DockPanel>
         <!-- メニューバー -->
@@ -14,6 +15,7 @@
                 <MenuItem x:Name="TopMostMenuItem" 
                          Header="最前面に表示" 
                          IsCheckable="True"
+                         IsChecked="True"
                          Click="TopMostMenuItem_Click"/>
             </MenuItem>
             <MenuItem Header="タスク">
@@ -103,7 +105,7 @@
                                                          FontFamily="Consolas"
                                                          FontSize="12"
                                                          Margin="0,2"/>
-                                                <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
+                                                <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}', UpdateSourceTrigger=PropertyChanged}"
                                                          FontFamily="Consolas"
                                                          FontSize="12"
                                                          Margin="0,2"/>

@@ -1,17 +1,68 @@
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace TaskManager
 {
-    public class TaskItem
+    public class TaskItem : INotifyPropertyChanged
     {
-        public string Name { get; set; }
-        public string Memo { get; set; }
+        private string name;
+        private string memo;
+        private TimeSpan elapsedTime;
+        private bool isCompleted;
+
+        public string Name
+        {
+            get => name;
+            set
+            {
+                name = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string Memo
+        {
+            get => memo;
+            set
+            {
+                memo = value;
+                OnPropertyChanged();
+            }
+        }
+
         public TimeSpan EstimatedTime { get; set; }
-        public TimeSpan ElapsedTime { get; set; }
-        public bool IsCompleted { get; set; }
+
+        public TimeSpan ElapsedTime
+        {
+            get => elapsedTime;
+            set
+            {
+                elapsedTime = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool IsCompleted
+        {
+            get => isCompleted;
+            set
+            {
+                isCompleted = value;
+                OnPropertyChanged();
+            }
+        }
+
         public DateTime? CompletedAt { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         [JsonConstructor]
         public TaskItem()
