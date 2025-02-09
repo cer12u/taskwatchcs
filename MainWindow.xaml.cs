@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -9,11 +10,13 @@ namespace TaskManager
         private DispatcherTimer timer;
         private DateTime startTime;
         private bool isRunning = false;
+        private ObservableCollection<TaskItem> tasks;
 
         public MainWindow()
         {
             InitializeComponent();
             InitializeStopwatch();
+            InitializeTasks();
         }
 
         private void InitializeStopwatch()
@@ -22,6 +25,17 @@ namespace TaskManager
             timer.Interval = TimeSpan.FromSeconds(1);
             timer.Tick += Timer_Tick;
             StopButton.IsEnabled = false;
+        }
+
+        private void InitializeTasks()
+        {
+            tasks = new ObservableCollection<TaskItem>
+            {
+                new TaskItem("サンプルタスク1"),
+                new TaskItem("サンプルタスク2"),
+                new TaskItem("サンプルタスク3")
+            };
+            TaskList.ItemsSource = tasks;
         }
 
         private void Timer_Tick(object sender, EventArgs e)
@@ -50,6 +64,14 @@ namespace TaskManager
                 isRunning = false;
                 StartButton.IsEnabled = true;
                 StopButton.IsEnabled = false;
+            }
+        }
+
+        private void DeleteTask_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is TaskItem task)
+            {
+                tasks.Remove(task);
             }
         }
     }

@@ -18,11 +18,43 @@
                 <ListBox x:Name="TaskList" Margin="5">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="5">
-                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Width="200"/>
-                                <Button Content="開始" Margin="5,0"/>
-                                <Button Content="完了" Margin="5,0"/>
-                            </StackPanel>
+                            <Border BorderBrush="#DDDDDD" 
+                                    BorderThickness="1" 
+                                    CornerRadius="4" 
+                                    Margin="0,5"
+                                    Padding="10"
+                                    Background="#F8F8F8">
+                                <StackPanel>
+                                    <!-- Task Panel -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Task Name -->
+                                        <TextBlock Grid.Column="0" 
+                                                 Text="{Binding Name}" 
+                                                 FontSize="14"
+                                                 VerticalAlignment="Center"/>
+
+                                        <!-- Elapsed Time -->
+                                        <TextBlock Grid.Column="1"
+                                                 Text="{Binding ElapsedTime, StringFormat='{}{0:hh\\:mm}'}"
+                                                 Margin="10,0"
+                                                 FontFamily="Consolas"
+                                                 FontSize="14"
+                                                 VerticalAlignment="Center"/>
+
+                                        <!-- Delete Button -->
+                                        <Button Grid.Column="2"
+                                                Content="削除"
+                                                Padding="10,5"
+                                                Click="DeleteTask_Click"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
