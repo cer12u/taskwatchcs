@@ -27,9 +27,9 @@ namespace TaskManager
                 MinutesComboBox.Items.Add(i);
             }
 
-            // デフォルト値を設定（1時間）
-            HoursComboBox.SelectedItem = 1;
-            MinutesComboBox.SelectedItem = 0;
+            // デフォルト値を設定（30分）
+            HoursComboBox.SelectedItem = 0;
+            MinutesComboBox.SelectedItem = 30;
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)

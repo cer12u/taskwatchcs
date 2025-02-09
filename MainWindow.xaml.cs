@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -11,12 +13,14 @@ namespace TaskManager
         private DateTime startTime;
         private bool isRunning = false;
         private ObservableCollection<TaskItem> tasks;
+        private readonly string taskSaveFile = "tasks.json";
 
         public MainWindow()
         {
             InitializeComponent();
             InitializeStopwatch();
             InitializeTasks();
+            LoadTasks(); // 起動時にタスクを読み込む
         }
 
         private void InitializeStopwatch()
@@ -67,6 +71,7 @@ namespace TaskManager
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
                 tasks.Remove(task);
+                SaveTasks(); // タスク削除時に保存
             }
         }
 
@@ -80,6 +85,67 @@ namespace TaskManager
             if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
             {
                 tasks.Add(inputWindow.CreatedTask);
+                SaveTasks(); // タスク追加時に保存
+            }
+        }
+
+        private void TopMostMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            Topmost = TopMostMenuItem.IsChecked;
+        }
+
+        private void SaveTasks_Click(object sender, RoutedEventArgs e)
+        {
+            SaveTasks();
+            MessageBox.Show("タスクを保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void LoadTasks_Click(object sender, RoutedEventArgs e)
+        {
+            LoadTasks();
+            MessageBox.Show("タスクを読み込みました。", "読み込み完了", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void SaveTasks()
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(tasks);
+                File.WriteAllText(taskSaveFile, json);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"タスクの保存中にエラーが発生しました。\n{ex.Message}", 
+                              "エラー", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Error);
+            }
+        }
+
+        private void LoadTasks()
+        {
+            try
+            {
+                if (File.Exists(taskSaveFile))
+                {
+                    var json = File.ReadAllText(taskSaveFile);
+                    var loadedTasks = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json);
+                    if (loadedTasks != null)
+                    {
+                        tasks.Clear();
+                        foreach (var task in loadedTasks)
+                        {
+                            tasks.Add(task);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"タスクの読み込み中にエラーが発生しました。\n{ex.Message}", 
+                              "エラー", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Error);
             }
         }
     }

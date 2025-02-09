@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace TaskManager
 {
@@ -8,6 +9,15 @@ namespace TaskManager
         public string Memo { get; set; }
         public TimeSpan EstimatedTime { get; set; }
         public TimeSpan ElapsedTime { get; set; }
+
+        [JsonConstructor]
+        public TaskItem()
+        {
+            Name = "";
+            Memo = "";
+            EstimatedTime = TimeSpan.Zero;
+            ElapsedTime = TimeSpan.Zero;
+        }
 
         public TaskItem(string name, string memo, TimeSpan estimatedTime)
         {

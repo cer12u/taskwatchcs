@@ -6,123 +6,142 @@
         xmlns:local="clr-namespace:TaskManager"
         mc:Ignorable="d"
         Title="タスク管理" Height="600" Width="800">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="200"/>
-        </Grid.RowDefinitions>
+    <DockPanel>
+        <!-- メニューバー -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="設定">
+                <MenuItem x:Name="TopMostMenuItem" 
+                         Header="最前面に表示" 
+                         IsCheckable="True"
+                         Click="TopMostMenuItem_Click"/>
+            </MenuItem>
+            <MenuItem Header="タスク">
+                <MenuItem Header="タスクを保存" 
+                         Click="SaveTasks_Click"/>
+                <MenuItem Header="タスクを読み込む" 
+                         Click="LoadTasks_Click"/>
+            </MenuItem>
+        </Menu>
 
-        <!-- Top Pane: Task List -->
-        <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" Margin="10">
-            <DockPanel>
-                <!-- Add Task Button -->
-                <Button DockPanel.Dock="Top"
-                        Content="新規タスク追加"
-                        Height="40"
-                        Margin="5"
-                        Click="AddTask_Click"
-                        HorizontalAlignment="Right"
-                        Padding="20,0"/>
+        <!-- メインコンテンツ -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="200"/>
+            </Grid.RowDefinitions>
 
-                <!-- Task List -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ListBox x:Name="TaskList" 
+            <!-- Top Pane: Task List -->
+            <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" Margin="10">
+                <DockPanel>
+                    <!-- Add Task Button -->
+                    <Button DockPanel.Dock="Top"
+                            Content="新規タスク追加"
+                            Height="40"
                             Margin="5"
-                            HorizontalContentAlignment="Stretch">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border BorderBrush="#DDDDDD" 
-                                        BorderThickness="1" 
-                                        CornerRadius="4" 
-                                        Margin="0,5"
-                                        Padding="10"
-                                        Background="#F8F8F8">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
+                            Click="AddTask_Click"
+                            HorizontalAlignment="Right"
+                            Padding="20,0"/>
 
-                                        <!-- Task Name and Delete Button -->
-                                        <TextBox Grid.Column="0" 
-                                                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
-                                                FontSize="14"
-                                                FontWeight="Bold"
-                                                VerticalAlignment="Center"
-                                                BorderThickness="0"
-                                                Background="Transparent"/>
+                    <!-- Task List -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ListBox x:Name="TaskList" 
+                                Margin="5"
+                                HorizontalContentAlignment="Stretch">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#DDDDDD" 
+                                            BorderThickness="1" 
+                                            CornerRadius="4" 
+                                            Margin="0,5"
+                                            Padding="10"
+                                            Background="#F8F8F8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
 
-                                        <!-- Time Information -->
-                                        <StackPanel Grid.Column="1" Margin="10,0">
-                                            <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
-                                                     FontFamily="Consolas"
-                                                     FontSize="12"
-                                                     Margin="0,2"/>
-                                            <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
-                                                     FontFamily="Consolas"
-                                                     FontSize="12"
-                                                     Margin="0,2"/>
-                                        </StackPanel>
+                                            <!-- Task Name and Delete Button -->
+                                            <TextBox Grid.Column="0" 
+                                                    Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                                                    FontSize="14"
+                                                    FontWeight="Bold"
+                                                    VerticalAlignment="Center"
+                                                    BorderThickness="0"
+                                                    Background="Transparent"/>
 
-                                        <!-- Delete Button -->
-                                        <Button Grid.Column="2"
-                                                Content="削除"
-                                                Padding="10,5"
-                                                VerticalAlignment="Top"
-                                                Click="DeleteTask_Click"/>
+                                            <!-- Time Information -->
+                                            <StackPanel Grid.Column="1" Margin="10,0">
+                                                <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
+                                                         FontFamily="Consolas"
+                                                         FontSize="12"
+                                                         Margin="0,2"/>
+                                                <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
+                                                         FontFamily="Consolas"
+                                                         FontSize="12"
+                                                         Margin="0,2"/>
+                                            </StackPanel>
 
-                                        <!-- Memo -->
-                                        <TextBlock Grid.Row="1"
-                                                 Grid.ColumnSpan="3"
-                                                 Text="{Binding Memo}"
-                                                 Margin="0,8,0,0"
-                                                 TextWrapping="Wrap"
-                                                 Opacity="0.7"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </ScrollViewer>
-            </DockPanel>
-        </Border>
+                                            <!-- Delete Button -->
+                                            <Button Grid.Column="2"
+                                                    Content="削除"
+                                                    Padding="10,5"
+                                                    VerticalAlignment="Top"
+                                                    Click="DeleteTask_Click"/>
 
-        <!-- Bottom Pane: Stopwatch -->
-        <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1" Margin="10">
-            <Grid Margin="10">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+                                            <!-- Memo -->
+                                            <TextBlock Grid.Row="1"
+                                                     Grid.ColumnSpan="3"
+                                                     Text="{Binding Memo}"
+                                                     Margin="0,8,0,0"
+                                                     TextWrapping="Wrap"
+                                                     Opacity="0.7"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
 
-                <TextBlock x:Name="StopwatchDisplay" 
-                         Text="00:00:00"
-                         FontSize="48"
-                         HorizontalAlignment="Center"
-                         Margin="0,10,0,20"/>
+            <!-- Bottom Pane: Stopwatch -->
+            <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1" Margin="10">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="1" 
-                          Orientation="Horizontal" 
-                          HorizontalAlignment="Center">
-                    <Button x:Name="StartButton"
-                            Content="開始"
-                            Width="100"
-                            Height="40"
-                            Margin="10,0"
-                            Click="StartButton_Click"/>
-                    <Button x:Name="StopButton"
-                            Content="停止"
-                            Width="100"
-                            Height="40"
-                            Margin="10,0"
-                            Click="StopButton_Click"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-    </Grid>
+                    <TextBlock x:Name="StopwatchDisplay" 
+                             Text="00:00:00"
+                             FontSize="48"
+                             HorizontalAlignment="Center"
+                             Margin="0,10,0,20"/>
+
+                    <StackPanel Grid.Row="1" 
+                              Orientation="Horizontal" 
+                              HorizontalAlignment="Center">
+                        <Button x:Name="StartButton"
+                                Content="開始"
+                                Width="100"
+                                Height="40"
+                                Margin="10,0"
+                                Click="StartButton_Click"/>
+                        <Button x:Name="StopButton"
+                                Content="停止"
+                                Width="100"
+                                Height="40"
+                                Margin="10,0"
+                                Click="StopButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </DockPanel>
 </Window>
