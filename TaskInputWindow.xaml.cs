@@ -1,17 +1,18 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Windows;
 
 namespace TaskManager
 {
     public partial class TaskInputWindow : Window
     {
+        private static readonly Regex TimeRegex = new Regex(@"^([0-9]{1,2}):([0-9]{2})$");
         public TaskItem? CreatedTask { get; private set; }
 
         public TaskInputWindow()
         {
             InitializeComponent();
-            HoursTextBox.Text = "1";
-            MinutesTextBox.Text = "0";
+            TimeTextBox.Text = "01:00"; // デフォルト1時間
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
@@ -22,19 +23,17 @@ namespace TaskManager
                 return;
             }
 
-            if (!int.TryParse(HoursTextBox.Text, out int hours) || hours < 0)
+            if (!ValidateAndParseTime(TimeTextBox.Text, out TimeSpan estimatedTime))
             {
-                MessageBox.Show("時間は0以上の数値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "予定時間は「HH:mm」の形式で入力してください。\n例: 01:30（1時間30分）", 
+                    "エラー", 
+                    MessageBoxButton.OK, 
+                    MessageBoxImage.Warning
+                );
                 return;
             }
 
-            if (!int.TryParse(MinutesTextBox.Text, out int minutes) || minutes < 0 || minutes >= 60)
-            {
-                MessageBox.Show("分は0以上60未満の数値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var estimatedTime = new TimeSpan(hours, minutes, 0);
             CreatedTask = new TaskItem(
                 TitleTextBox.Text.Trim(),
                 MemoTextBox.Text?.Trim() ?? "",
@@ -43,6 +42,28 @@ namespace TaskManager
 
             DialogResult = true;
             Close();
+        }
+
+        private bool ValidateAndParseTime(string timeText, out TimeSpan result)
+        {
+            result = TimeSpan.Zero;
+            
+            if (string.IsNullOrWhiteSpace(timeText))
+                return false;
+
+            var match = TimeRegex.Match(timeText);
+            if (!match.Success)
+                return false;
+
+            if (!int.TryParse(match.Groups[1].Value, out int hours) || 
+                !int.TryParse(match.Groups[2].Value, out int minutes))
+                return false;
+
+            if (hours < 0 || minutes < 0 || minutes >= 60)
+                return false;
+
+            result = new TimeSpan(hours, minutes, 0);
+            return true;
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
