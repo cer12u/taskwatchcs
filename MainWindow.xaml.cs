@@ -291,6 +291,27 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// タスクダブルクリック時の処理（編集）
+        /// </summary>
+        private void TaskList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is ListBox listBox && listBox.SelectedItem is TaskItem selectedTask)
+            {
+                var dialog = new TaskEditDialog(selectedTask.Name, selectedTask.Memo)
+                {
+                    Owner = this
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    selectedTask.Name = dialog.TaskName;
+                    selectedTask.Memo = dialog.Memo;
+                    SaveTasks();
+                }
+            }
+        }
+
+        /// <summary>
         /// 現在選択中のタスクを取得
         /// </summary>
         private TaskItem? GetSelectedTask()

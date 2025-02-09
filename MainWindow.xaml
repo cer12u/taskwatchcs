@@ -59,6 +59,7 @@
                                     Margin="5"
                                     HorizontalContentAlignment="Stretch"
                                     SelectionChanged="TaskList_SelectionChanged"
+                                    MouseDoubleClick="TaskList_MouseDoubleClick"
                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
                                     ScrollViewer.CanContentScroll="True">
                                 <ListBox.ItemTemplate>
@@ -156,6 +157,7 @@
                                     Margin="5"
                                     HorizontalContentAlignment="Stretch"
                                     SelectionChanged="TaskList_SelectionChanged"
+                                    MouseDoubleClick="TaskList_MouseDoubleClick"
                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
                                     ScrollViewer.CanContentScroll="True">
                                 <ListBox.ItemTemplate>
@@ -247,6 +249,7 @@
                                     Margin="5"
                                     HorizontalContentAlignment="Stretch"
                                     SelectionChanged="TaskList_SelectionChanged"
+                                    MouseDoubleClick="TaskList_MouseDoubleClick"
                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
                                     ScrollViewer.CanContentScroll="True">
                                 <ListBox.ItemTemplate>
