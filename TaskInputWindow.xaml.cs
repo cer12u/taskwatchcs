@@ -1,18 +1,35 @@
 using System;
-using System.Text.RegularExpressions;
 using System.Windows;
 
 namespace TaskManager
 {
     public partial class TaskInputWindow : Window
     {
-        private static readonly Regex TimeRegex = new Regex(@"^([0-9]{1,2}):([0-9]{2})$");
         public TaskItem? CreatedTask { get; private set; }
 
         public TaskInputWindow()
         {
             InitializeComponent();
-            TimeTextBox.Text = "01:00"; // デフォルト1時間
+            InitializeTimeComboBoxes();
+        }
+
+        private void InitializeTimeComboBoxes()
+        {
+            // 時間の選択肢を設定（0-23時間）
+            for (int i = 0; i <= 23; i++)
+            {
+                HoursComboBox.Items.Add(i);
+            }
+
+            // 分の選択肢を設定（0-55分、5分刻み）
+            for (int i = 0; i <= 55; i += 5)
+            {
+                MinutesComboBox.Items.Add(i);
+            }
+
+            // デフォルト値を設定（1時間）
+            HoursComboBox.SelectedItem = 1;
+            MinutesComboBox.SelectedItem = 0;
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
@@ -23,16 +40,15 @@ namespace TaskManager
                 return;
             }
 
-            if (!ValidateAndParseTime(TimeTextBox.Text, out TimeSpan estimatedTime))
+            if (HoursComboBox.SelectedItem == null || MinutesComboBox.SelectedItem == null)
             {
-                MessageBox.Show(
-                    "予定時間は「HH:mm」の形式で入力してください。\n例: 01:30（1時間30分）", 
-                    "エラー", 
-                    MessageBoxButton.OK, 
-                    MessageBoxImage.Warning
-                );
+                MessageBox.Show("予定時間を選択してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            int hours = (int)HoursComboBox.SelectedItem;
+            int minutes = (int)MinutesComboBox.SelectedItem;
+            var estimatedTime = new TimeSpan(hours, minutes, 0);
 
             CreatedTask = new TaskItem(
                 TitleTextBox.Text.Trim(),
@@ -42,28 +58,6 @@ namespace TaskManager
 
             DialogResult = true;
             Close();
-        }
-
-        private bool ValidateAndParseTime(string timeText, out TimeSpan result)
-        {
-            result = TimeSpan.Zero;
-            
-            if (string.IsNullOrWhiteSpace(timeText))
-                return false;
-
-            var match = TimeRegex.Match(timeText);
-            if (!match.Success)
-                return false;
-
-            if (!int.TryParse(match.Groups[1].Value, out int hours) || 
-                !int.TryParse(match.Groups[2].Value, out int minutes))
-                return false;
-
-            if (hours < 0 || minutes < 0 || minutes >= 60)
-                return false;
-
-            result = new TimeSpan(hours, minutes, 0);
-            return true;
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

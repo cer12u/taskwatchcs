@@ -37,13 +37,23 @@
 
         <!-- 予定時間入力 -->
         <Label Grid.Row="4" 
-               Content="予定時間 (HH:mm)" 
+               Content="予定時間" 
                Padding="0,0,0,2"/>
-        <TextBox x:Name="TimeTextBox"
-                 Grid.Row="5"
-                 Width="100"
-                 HorizontalAlignment="Left"
-                 ToolTip="例: 01:30（1時間30分）"/>
+        <StackPanel Grid.Row="5" 
+                    Orientation="Horizontal" 
+                    Margin="0,0,0,8">
+            <ComboBox x:Name="HoursComboBox"
+                      Width="70"
+                      Margin="0,0,5,0"/>
+            <TextBlock Text="時間" 
+                      VerticalAlignment="Center"
+                      Margin="0,0,10,0"/>
+            <ComboBox x:Name="MinutesComboBox"
+                      Width="70"
+                      Margin="0,0,5,0"/>
+            <TextBlock Text="分" 
+                      VerticalAlignment="Center"/>
+        </StackPanel>
 
         <!-- ボタン -->
         <StackPanel Grid.Row="6" 
