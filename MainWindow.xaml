@@ -20,6 +20,9 @@
                          Click="SaveTasks_Click"/>
                 <MenuItem Header="タスクを読み込む" 
                          Click="LoadTasks_Click"/>
+                <Separator/>
+                <MenuItem Header="完了済みタスクを表示" 
+                         Click="ShowCompletedTasks_Click"/>
             </MenuItem>
         </Menu>
 
@@ -46,7 +49,8 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ListBox x:Name="TaskList" 
                                 Margin="5"
-                                HorizontalContentAlignment="Stretch">
+                                HorizontalContentAlignment="Stretch"
+                                SelectionChanged="TaskList_SelectionChanged">
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem">
                                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -67,6 +71,7 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto"/>
@@ -78,7 +83,18 @@
                                                      Text="{Binding Name}" 
                                                      FontSize="14"
                                                      FontWeight="Bold"
-                                                     VerticalAlignment="Center"/>
+                                                     VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                                <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                                <Setter Property="Opacity" Value="0.6"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
 
                                             <!-- Time Information -->
                                             <StackPanel Grid.Column="1" Margin="10,0">
@@ -92,8 +108,26 @@
                                                          Margin="0,2"/>
                                             </StackPanel>
 
-                                            <!-- Delete Button -->
+                                            <!-- Complete Button -->
                                             <Button Grid.Column="2"
+                                                    Content="完了"
+                                                    Padding="10,5"
+                                                    Margin="5,0"
+                                                    VerticalAlignment="Top"
+                                                    Click="CompleteTask_Click">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+
+                                            <!-- Delete Button -->
+                                            <Button Grid.Column="3"
                                                     Content="削除"
                                                     Padding="10,5"
                                                     VerticalAlignment="Top"
@@ -101,7 +135,7 @@
 
                                             <!-- Memo (Only visible when selected) -->
                                             <TextBlock Grid.Row="1"
-                                                     Grid.ColumnSpan="3"
+                                                     Grid.ColumnSpan="4"
                                                      Text="{Binding Memo}"
                                                      Margin="0,8,0,0"
                                                      TextWrapping="Wrap"
@@ -132,15 +166,33 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock x:Name="StopwatchDisplay" 
-                             Text="00:00:00"
-                             FontSize="48"
+                    <!-- Current Task Name -->
+                    <TextBlock x:Name="CurrentTaskName"
+                             Text="選択タスク: なし"
+                             FontSize="14"
                              HorizontalAlignment="Center"
-                             Margin="0,10,0,20"/>
+                             Margin="0,0,0,10"/>
 
+                    <!-- Stopwatch Display -->
                     <StackPanel Grid.Row="1" 
+                              Orientation="Horizontal"
+                              HorizontalAlignment="Center"
+                              Margin="0,0,0,20">
+                        <TextBlock x:Name="StopwatchDisplay" 
+                                 Text="00:00:00"
+                                 FontSize="48"/>
+                        <TextBlock x:Name="StopwatchMilliseconds"
+                                 Text=".000"
+                                 FontSize="24"
+                                 VerticalAlignment="Bottom"
+                                 Margin="0,0,0,8"/>
+                    </StackPanel>
+
+                    <!-- Control Buttons -->
+                    <StackPanel Grid.Row="2" 
                               Orientation="Horizontal" 
                               HorizontalAlignment="Center">
                         <Button x:Name="StartButton"
