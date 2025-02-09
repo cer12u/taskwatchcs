@@ -21,7 +21,7 @@ namespace TaskManager
         private TaskLogger logger;
         private TaskItem otherTask;
         private DateTime? lastTickTime;
-        private TimeSpan baseElapsedTime; // タスクの累積時間
+        private TimeSpan baseElapsedTime;
 
         public MainWindow()
         {
@@ -67,14 +67,6 @@ namespace TaskManager
             // Update display with total elapsed time
             StopwatchDisplay.Text = totalElapsed.ToString(@"hh\:mm\:ss");
             StopwatchMilliseconds.Text = $".{(totalElapsed.Milliseconds / 100)}";
-
-            // Add elapsed time to current task
-            if (lastTickTime.HasValue)
-            {
-                var tickDuration = now - lastTickTime.Value;
-                var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
-                currentTask.AddElapsedTime(tickDuration);
-            }
             
             lastTickTime = now;
         }
@@ -115,7 +107,7 @@ namespace TaskManager
                 var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
                 var duration = DateTime.Now - startTime;
                 currentTask.AddElapsedTime(duration);
-                baseElapsedTime = currentTask.ElapsedTime; // 現在のタスクの累積時間を保存
+                baseElapsedTime = currentTask.ElapsedTime;
                 logger.LogTaskStop(currentTask, duration);
                 lastTickTime = null;
                 SaveTasks();
@@ -134,7 +126,7 @@ namespace TaskManager
             }
 
             var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
-            baseElapsedTime = currentTask.ElapsedTime; // 新しいタスクの累積時間をロード
+            baseElapsedTime = currentTask.ElapsedTime;
             StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
             StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
 
