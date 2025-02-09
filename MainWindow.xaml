@@ -44,119 +44,119 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Task List -->
-                    <ScrollViewer Grid.Row="0" 
-                                VerticalScrollBarVisibility="Auto">
-                        <ListBox x:Name="TaskList" 
-                                Margin="5"
-                                HorizontalContentAlignment="Stretch"
-                                SelectionChanged="TaskList_SelectionChanged">
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    <Setter Property="Padding" Value="0"/>
-                                    <Setter Property="Margin" Value="0,5"/>
-                                    <Setter Property="Focusable" Value="True"/>
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="#DDDDDD" 
-                                            BorderThickness="1" 
-                                            CornerRadius="4" 
-                                            Padding="10"
-                                            Background="#F8F8F8">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
+                    <!-- Task List with ScrollViewer -->
+                    <ListBox x:Name="TaskList" 
+                            Grid.Row="0"
+                            Margin="5"
+                            HorizontalContentAlignment="Stretch"
+                            SelectionChanged="TaskList_SelectionChanged"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            ScrollViewer.CanContentScroll="True">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,5"/>
+                                <Setter Property="Focusable" Value="True"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#DDDDDD" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4" 
+                                        Padding="10"
+                                        Background="#F8F8F8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
 
-                                            <!-- Task Name -->
-                                            <TextBlock Grid.Column="0" 
-                                                     Text="{Binding Name}" 
-                                                     FontSize="14"
-                                                     FontWeight="Bold"
-                                                     VerticalAlignment="Center">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                                <Setter Property="TextDecorations" Value="Strikethrough"/>
-                                                                <Setter Property="Opacity" Value="0.6"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
+                                        <!-- Task Name -->
+                                        <TextBlock Grid.Column="0" 
+                                                 Text="{Binding Name}" 
+                                                 FontSize="14"
+                                                 FontWeight="Bold"
+                                                 VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                            <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                            <Setter Property="Opacity" Value="0.6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
 
-                                            <!-- Time Information -->
-                                            <StackPanel Grid.Column="1" Margin="10,0">
-                                                <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
-                                                         FontFamily="Consolas"
-                                                         FontSize="12"
-                                                         Margin="0,2"/>
-                                                <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}', UpdateSourceTrigger=PropertyChanged}"
-                                                         FontFamily="Consolas"
-                                                         FontSize="12"
-                                                         Margin="0,2"/>
-                                            </StackPanel>
+                                        <!-- Time Information -->
+                                        <StackPanel Grid.Column="1" Margin="10,0">
+                                            <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
+                                                     FontFamily="Consolas"
+                                                     FontSize="12"
+                                                     Margin="0,2"/>
+                                            <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}', UpdateSourceTrigger=PropertyChanged}"
+                                                     FontFamily="Consolas"
+                                                     FontSize="12"
+                                                     Margin="0,2"/>
+                                        </StackPanel>
 
-                                            <!-- Complete Button -->
-                                            <Button Grid.Column="2"
-                                                    Content="完了"
-                                                    Padding="10,5"
-                                                    Margin="5,0"
-                                                    VerticalAlignment="Top"
-                                                    Click="CompleteTask_Click">
-                                                <Button.Style>
-                                                    <Style TargetType="Button">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Button.Style>
-                                            </Button>
+                                        <!-- Complete Button -->
+                                        <Button Grid.Column="2"
+                                                Content="完了"
+                                                Padding="10,5"
+                                                Margin="5,0"
+                                                VerticalAlignment="Top"
+                                                Click="CompleteTask_Click">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
 
-                                            <!-- Delete Button -->
-                                            <Button Grid.Column="3"
-                                                    Content="削除"
-                                                    Padding="10,5"
-                                                    VerticalAlignment="Top"
-                                                    Click="DeleteTask_Click"/>
+                                        <!-- Delete Button -->
+                                        <Button Grid.Column="3"
+                                                Content="削除"
+                                                Padding="10,5"
+                                                VerticalAlignment="Top"
+                                                Click="DeleteTask_Click"/>
 
-                                            <!-- Memo (Only visible when selected) -->
-                                            <TextBlock Grid.Row="1"
-                                                     Grid.ColumnSpan="4"
-                                                     Text="{Binding Memo}"
-                                                     Margin="0,8,0,0"
-                                                     TextWrapping="Wrap"
-                                                     Opacity="0.7">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </ScrollViewer>
+                                        <!-- Memo (Only visible when selected) -->
+                                        <TextBlock Grid.Row="1"
+                                                 Grid.ColumnSpan="4"
+                                                 Text="{Binding Memo}"
+                                                 Margin="0,8,0,0"
+                                                 TextWrapping="Wrap"
+                                                 Opacity="0.7">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
                     <!-- Add Task Button -->
                     <Button Grid.Row="1"
