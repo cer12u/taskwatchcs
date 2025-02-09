@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace TaskManager
@@ -21,6 +23,9 @@ namespace TaskManager
             InitializeStopwatch();
             InitializeTasks();
             LoadTasks(); // 起動時にタスクを読み込む
+
+            // タスクリストのダブルクリックイベントを追加
+            TaskList.MouseDoubleClick += TaskList_MouseDoubleClick;
         }
 
         private void InitializeStopwatch()
@@ -86,6 +91,23 @@ namespace TaskManager
             {
                 tasks.Add(inputWindow.CreatedTask);
                 SaveTasks(); // タスク追加時に保存
+            }
+        }
+
+        private void TaskList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (TaskList.SelectedItem is TaskItem selectedTask)
+            {
+                var dialog = new TaskNameEditDialog(selectedTask.Name)
+                {
+                    Owner = this
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    selectedTask.Name = dialog.TaskName;
+                    SaveTasks(); // タスク名変更時に保存
+                }
             }
         }
 

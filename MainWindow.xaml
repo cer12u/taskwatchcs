@@ -52,6 +52,7 @@
                                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                     <Setter Property="Padding" Value="0"/>
                                     <Setter Property="Margin" Value="0,5"/>
+                                    <Setter Property="Focusable" Value="True"/>
                                 </Style>
                             </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
@@ -72,14 +73,12 @@
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
 
-                                            <!-- Task Name and Delete Button -->
-                                            <TextBox Grid.Column="0" 
-                                                    Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
-                                                    FontSize="14"
-                                                    FontWeight="Bold"
-                                                    VerticalAlignment="Center"
-                                                    BorderThickness="0"
-                                                    Background="Transparent"/>
+                                            <!-- Task Name -->
+                                            <TextBlock Grid.Column="0" 
+                                                     Text="{Binding Name}" 
+                                                     FontSize="14"
+                                                     FontWeight="Bold"
+                                                     VerticalAlignment="Center"/>
 
                                             <!-- Time Information -->
                                             <StackPanel Grid.Column="1" Margin="10,0">
