@@ -24,6 +24,7 @@ x64/
 x86/
 build/
 bld/
+logs/
 [Bb]in/
 [Oo]bj/
 [Oo]ut/
