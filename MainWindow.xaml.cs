@@ -21,6 +21,7 @@ namespace TaskManager
         private TaskLogger logger;
         private TaskItem otherTask;
         private DateTime? lastTickTime;
+        private TimeSpan baseElapsedTime; // タスクの累積時間
 
         public MainWindow()
         {
@@ -60,11 +61,12 @@ namespace TaskManager
         private void Timer_Tick(object sender, EventArgs e)
         {
             var now = DateTime.Now;
-            TimeSpan elapsed = now - startTime;
+            TimeSpan currentElapsed = now - startTime;
+            TimeSpan totalElapsed = baseElapsedTime + currentElapsed;
             
-            // Update display with 1 digit milliseconds
-            StopwatchDisplay.Text = elapsed.ToString(@"hh\:mm\:ss");
-            StopwatchMilliseconds.Text = $".{(elapsed.Milliseconds / 100)}";
+            // Update display with total elapsed time
+            StopwatchDisplay.Text = totalElapsed.ToString(@"hh\:mm\:ss");
+            StopwatchMilliseconds.Text = $".{(totalElapsed.Milliseconds / 100)}";
 
             // Add elapsed time to current task
             if (lastTickTime.HasValue)
@@ -112,10 +114,15 @@ namespace TaskManager
 
                 var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
                 var duration = DateTime.Now - startTime;
-                currentTask.AddElapsedTime(duration); // 最終的な経過時間を追加
+                currentTask.AddElapsedTime(duration);
+                baseElapsedTime = currentTask.ElapsedTime; // 現在のタスクの累積時間を保存
                 logger.LogTaskStop(currentTask, duration);
                 lastTickTime = null;
-                SaveTasks(); // 経過時間を保存
+                SaveTasks();
+
+                // Update display with final time
+                StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
+                StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
             }
         }
 
@@ -125,6 +132,11 @@ namespace TaskManager
             {
                 StopTimer(); // タスク切り替え時にストップウォッチを停止
             }
+
+            var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
+            baseElapsedTime = currentTask.ElapsedTime; // 新しいタスクの累積時間をロード
+            StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
+            StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
 
             UpdateCurrentTaskDisplay();
         }
@@ -150,6 +162,11 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
+                if (isRunning && TaskList.SelectedItem == task)
+                {
+                    StopTimer(); // 完了するタスクが現在実行中なら停止
+                }
+
                 task.Complete();
                 tasks.Remove(task);
                 completedTasks.Add(task);
