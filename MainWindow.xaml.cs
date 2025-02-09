@@ -17,6 +17,7 @@ namespace TaskManager
     public partial class MainWindow : Window
     {
         private readonly DispatcherTimer timer = new();
+        private readonly DispatcherTimer resetCheckTimer = new();
         private DateTime startTime;
         private bool isRunning = false;
         private readonly ObservableCollection<TaskItem> inProgressTasks = new();
@@ -38,8 +39,10 @@ namespace TaskManager
             otherTask = new TaskItem("その他", "選択されていないときの作業時間", TimeSpan.FromHours(24));
 
             InitializeStopwatch();
+            InitializeResetTimer();
             InitializeTasks();
             LoadTasks();
+            CheckAndArchiveTasks();
         }
 
         /// <summary>
@@ -52,6 +55,71 @@ namespace TaskManager
             StopButton.IsEnabled = false;
             UpdateCurrentTaskDisplay();
             UpdateTimerControls();
+        }
+
+        /// <summary>
+        /// リセット確認タイマーの初期化
+        /// </summary>
+        private void InitializeResetTimer()
+        {
+            resetCheckTimer.Interval = TimeSpan.FromMinutes(1); // 1分ごとにチェック
+            resetCheckTimer.Tick += ResetCheckTimer_Tick;
+            resetCheckTimer.Start();
+        }
+
+        /// <summary>
+        /// リセット時刻の確認とタスクのアーカイブ処理
+        /// </summary>
+        private void ResetCheckTimer_Tick(object? sender, EventArgs e)
+        {
+            CheckAndArchiveTasks();
+        }
+
+        /// <summary>
+        /// タスクのアーカイブ処理を実行
+        /// </summary>
+        private void CheckAndArchiveTasks()
+        {
+            var settings = Settings.Instance;
+            if (settings.NeedsReset())
+            {
+                ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
+                settings.UpdateLastResetTime();
+            }
+        }
+
+        /// <summary>
+        /// 完了済みタスクをアーカイブ
+        /// </summary>
+        private void ArchiveCompletedTasks(DateTime date)
+        {
+            try
+            {
+                var tasksToArchive = completedTasks
+                    .Where(t => t.CompletedAt?.Date <= date.Date)
+                    .ToList();
+
+                if (tasksToArchive.Any())
+                {
+                    var archiveFile = Settings.GetArchiveFilePath(date);
+                    var json = JsonSerializer.Serialize(tasksToArchive);
+                    File.WriteAllText(archiveFile, json);
+
+                    foreach (var task in tasksToArchive)
+                    {
+                        completedTasks.Remove(task);
+                    }
+
+                    SaveTasks();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"タスクのアーカイブ中にエラーが発生しました。\n{ex.Message}",
+                              "エラー",
+                              MessageBoxButton.OK,
+                              MessageBoxImage.Error);
+            }
         }
 
         /// <summary>
@@ -313,6 +381,23 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// 設定ダイアログを開く
+        /// </summary>
+        private void OpenSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new SettingsDialog
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                // 設定が変更された場合、次回のリセット時刻を更新
+                CheckAndArchiveTasks();
+            }
+        }
+
+        /// <summary>
         /// 最前面表示切り替え時の処理
         /// </summary>
         private void TopMostMenuItem_Click(object sender, RoutedEventArgs e)
@@ -329,7 +414,9 @@ namespace TaskManager
             {
                 StopTimer();
             }
+            resetCheckTimer.Stop();
             SaveTasks();
+            CheckAndArchiveTasks();
         }
 
         /// <summary>

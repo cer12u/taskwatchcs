@@ -17,6 +17,9 @@
                          IsCheckable="True"
                          IsChecked="True"
                          Click="TopMostMenuItem_Click"/>
+                <Separator/>
+                <MenuItem Header="リセット時刻の設定" 
+                         Click="OpenSettings_Click"/>
             </MenuItem>
             <MenuItem Header="タスク">
                 <MenuItem Header="タスクを保存" 
