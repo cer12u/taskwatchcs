@@ -44,7 +44,14 @@
                     <!-- Task Tabs -->
                     <TabControl Grid.Row="0" x:Name="TaskTabs">
                         <!-- 進行中タスク -->
-                        <TabItem Header="進行中">
+                        <TabItem>
+                            <TabItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="進行中"/>
+                                    <TextBlock Text="{Binding ElementName=InProgressList, Path=Items.Count, StringFormat=' ({0})'}" 
+                                             Margin="2,0,0,0"/>
+                                </StackPanel>
+                            </TabItem.Header>
                             <ListBox x:Name="InProgressList"
                                     Margin="5"
                                     HorizontalContentAlignment="Stretch"
@@ -134,7 +141,14 @@
                         </TabItem>
 
                         <!-- 保留中タスク -->
-                        <TabItem Header="保留中">
+                        <TabItem>
+                            <TabItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="保留中"/>
+                                    <TextBlock Text="{Binding ElementName=PendingList, Path=Items.Count, StringFormat=' ({0})'}" 
+                                             Margin="2,0,0,0"/>
+                                </StackPanel>
+                            </TabItem.Header>
                             <ListBox x:Name="PendingList"
                                     Margin="5"
                                     HorizontalContentAlignment="Stretch"
@@ -179,18 +193,12 @@
                                                              Margin="0,2"/>
                                                 </StackPanel>
 
-                                                <!-- Status Buttons -->
-                                                <StackPanel Grid.Column="2" 
-                                                          Orientation="Horizontal"
-                                                          Margin="5,0">
-                                                    <Button Content="再開"
-                                                            Padding="10,5"
-                                                            Margin="0,0,5,0"
-                                                            Click="SetInProgressTask_Click"/>
-                                                    <Button Content="完了"
-                                                            Padding="10,5"
-                                                            Click="CompleteTask_Click"/>
-                                                </StackPanel>
+                                                <!-- Status Button -->
+                                                <Button Grid.Column="2"
+                                                        Content="再開"
+                                                        Padding="10,5"
+                                                        Margin="5,0"
+                                                        Click="SetInProgressTask_Click"/>
 
                                                 <!-- Delete Button -->
                                                 <Button Grid.Column="3"
@@ -224,7 +232,14 @@
                         </TabItem>
 
                         <!-- 完了済みタスク -->
-                        <TabItem Header="完了済み">
+                        <TabItem>
+                            <TabItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="完了済み"/>
+                                    <TextBlock Text="{Binding ElementName=CompletedList, Path=Items.Count, StringFormat=' ({0})'}" 
+                                             Margin="2,0,0,0"/>
+                                </StackPanel>
+                            </TabItem.Header>
                             <ListBox x:Name="CompletedList"
                                     Margin="5"
                                     HorizontalContentAlignment="Stretch"

@@ -51,6 +51,7 @@ namespace TaskManager
             timer.Tick += Timer_Tick;
             StopButton.IsEnabled = false;
             UpdateCurrentTaskDisplay();
+            UpdateTimerControls();
         }
 
         /// <summary>
@@ -81,28 +82,39 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// タイマーコントロールの状態を更新
+        /// </summary>
+        private void UpdateTimerControls()
+        {
+            var selectedTask = GetSelectedTask();
+            bool canStart = selectedTask == null || selectedTask.Status == TaskStatus.InProgress;
+            
+            StartButton.IsEnabled = !isRunning && canStart;
+            StopButton.IsEnabled = isRunning;
+        }
+
+        /// <summary>
         /// 開始ボタンクリック時の処理
         /// </summary>
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
+            var selectedTask = GetSelectedTask();
+            if (selectedTask != null && selectedTask.Status != TaskStatus.InProgress)
+            {
+                MessageBox.Show("進行中のタスクのみ時間を記録できます。", 
+                              "警告", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Warning);
+                return;
+            }
+
             if (!isRunning)
             {
-                var selectedTask = GetSelectedTask();
-                if (selectedTask?.Status == TaskStatus.Pending)
-                {
-                    MessageBox.Show("保留中のタスクは開始できません。\n再開ボタンを使用してください。", 
-                                  "警告", 
-                                  MessageBoxButton.OK, 
-                                  MessageBoxImage.Warning);
-                    return;
-                }
-
                 startTime = DateTime.Now;
                 lastTickTime = startTime;
                 timer.Start();
                 isRunning = true;
-                StartButton.IsEnabled = false;
-                StopButton.IsEnabled = true;
+                UpdateTimerControls();
 
                 var currentTask = selectedTask ?? otherTask;
                 logger.LogTaskStart(currentTask);
@@ -129,8 +141,7 @@ namespace TaskManager
             {
                 timer.Stop();
                 isRunning = false;
-                StartButton.IsEnabled = true;
-                StopButton.IsEnabled = false;
+                UpdateTimerControls();
 
                 var currentTask = GetSelectedTask() ?? otherTask;
                 var duration = DateTime.Now - startTime;
@@ -162,6 +173,7 @@ namespace TaskManager
             StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
 
             UpdateCurrentTaskDisplay();
+            UpdateTimerControls();
         }
 
         /// <summary>
@@ -234,6 +246,7 @@ namespace TaskManager
                 completedTasks.Add(task);
                 logger.LogTaskComplete(task);
                 SaveTasks();
+                UpdateTimerControls();
             }
         }
 
@@ -254,6 +267,7 @@ namespace TaskManager
                 pendingTasks.Add(task);
                 logger.LogTaskStop(task, TimeSpan.Zero);
                 SaveTasks();
+                UpdateTimerControls();
             }
         }
 
@@ -277,6 +291,7 @@ namespace TaskManager
                 task.SetInProgress();
                 inProgressTasks.Add(task);
                 SaveTasks();
+                UpdateTimerControls();
             }
         }
 
