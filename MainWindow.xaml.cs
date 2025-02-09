@@ -98,7 +98,7 @@ namespace TaskManager
         {
             if (TaskList.SelectedItem is TaskItem selectedTask)
             {
-                var dialog = new TaskNameEditDialog(selectedTask.Name)
+                var dialog = new TaskEditDialog(selectedTask.Name, selectedTask.Memo)
                 {
                     Owner = this
                 };
@@ -106,7 +106,8 @@ namespace TaskManager
                 if (dialog.ShowDialog() == true)
                 {
                     selectedTask.Name = dialog.TaskName;
-                    SaveTasks(); // タスク名変更時に保存
+                    selectedTask.Memo = dialog.Memo;
+                    SaveTasks(); // タスク編集時に保存
                 }
             }
         }
