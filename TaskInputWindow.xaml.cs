@@ -1,25 +1,31 @@
 using System;
 using System.Windows;
-using System.Windows.Interop;
 
 namespace TaskManager
 {
+    /// <summary>
+    /// 新規タスク作成ダイアログ。
+    /// タスク名、メモ、予定時間の入力機能を提供します。
+    /// </summary>
     public partial class TaskInputWindow : Window
     {
+        /// <summary>
+        /// 作成されたタスク
+        /// </summary>
         public TaskItem? CreatedTask { get; private set; }
 
+        /// <summary>
+        /// TaskInputWindowのコンストラクタ
+        /// </summary>
         public TaskInputWindow()
         {
             InitializeComponent();
             InitializeTimeComboBoxes();
         }
 
-        protected override void OnSourceInitialized(EventArgs e)
-        {
-            base.OnSourceInitialized(e);
-            TitleTextBox.Focus(); // バックアップとしてフォーカスを設定
-        }
-
+        /// <summary>
+        /// 時間選択コンボボックスの初期化
+        /// </summary>
         private void InitializeTimeComboBoxes()
         {
             // 時間の選択肢を設定（0-23時間）
@@ -39,6 +45,10 @@ namespace TaskManager
             MinutesComboBox.SelectedItem = 30;
         }
 
+        /// <summary>
+        /// 追加ボタンクリック時の処理
+        /// 入力値を検証し、新しいタスクを作成します
+        /// </summary>
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(TitleTextBox.Text))
@@ -68,6 +78,10 @@ namespace TaskManager
             Close();
         }
 
+        /// <summary>
+        /// キャンセルボタンクリック時の処理
+        /// タスク作成をキャンセルしてダイアログを閉じます
+        /// </summary>
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
