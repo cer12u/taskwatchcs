@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TaskManager"
         mc:Ignorable="d"
-        Title="タスク管理" Height="600" Width="800">
+        Title="タスク管理" Height="600" Width="800"
+        Closing="Window_Closing">
     <DockPanel>
         <!-- メニューバー -->
         <Menu DockPanel.Dock="Top">
@@ -185,7 +186,7 @@
                                  Text="00:00:00"
                                  FontSize="48"/>
                         <TextBlock x:Name="StopwatchMilliseconds"
-                                 Text=".000"
+                                 Text=".0"
                                  FontSize="24"
                                  VerticalAlignment="Bottom"
                                  Margin="0,0,0,8"/>

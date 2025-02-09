@@ -44,7 +44,7 @@ namespace TaskManager
         private void InitializeStopwatch()
         {
             timer = new DispatcherTimer();
-            timer.Interval = TimeSpan.FromMilliseconds(50); // Update more frequently for milliseconds
+            timer.Interval = TimeSpan.FromMilliseconds(100); // Update for 1 digit milliseconds
             timer.Tick += Timer_Tick;
             StopButton.IsEnabled = false;
             UpdateCurrentTaskDisplay();
@@ -62,9 +62,9 @@ namespace TaskManager
             var now = DateTime.Now;
             TimeSpan elapsed = now - startTime;
             
-            // Update display
+            // Update display with 1 digit milliseconds
             StopwatchDisplay.Text = elapsed.ToString(@"hh\:mm\:ss");
-            StopwatchMilliseconds.Text = $".{elapsed.Milliseconds:D3}";
+            StopwatchMilliseconds.Text = $".{(elapsed.Milliseconds / 100)}";
 
             // Add elapsed time to current task
             if (lastTickTime.HasValue)
@@ -109,11 +109,13 @@ namespace TaskManager
                 isRunning = false;
                 StartButton.IsEnabled = true;
                 StopButton.IsEnabled = false;
-                lastTickTime = null;
 
                 var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
                 var duration = DateTime.Now - startTime;
+                currentTask.AddElapsedTime(duration); // 最終的な経過時間を追加
                 logger.LogTaskStop(currentTask, duration);
+                lastTickTime = null;
+                SaveTasks(); // 経過時間を保存
             }
         }
 
@@ -121,18 +123,7 @@ namespace TaskManager
         {
             if (isRunning)
             {
-                // Log stop for previous task
-                var previousTask = e.RemovedItems.Count > 0 ? e.RemovedItems[0] as TaskItem : otherTask;
-                var duration = DateTime.Now - startTime;
-                logger.LogTaskStop(previousTask, duration);
-
-                // Log start for new task
-                var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
-                logger.LogTaskStart(currentTask);
-
-                // Reset timer for new task
-                startTime = DateTime.Now;
-                lastTickTime = startTime;
+                StopTimer(); // タスク切り替え時にストップウォッチを停止
             }
 
             UpdateCurrentTaskDisplay();
@@ -223,6 +214,16 @@ namespace TaskManager
             }
 
             MessageBox.Show(message.ToString(), "完了済みタスク一覧", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (isRunning)
+            {
+                StopTimer(); // アプリ終了時にタイマーを停止
+            }
+            SaveTasks();
+            SaveCompletedTasks();
         }
 
         private void SaveTasks_Click(object sender, RoutedEventArgs e)
