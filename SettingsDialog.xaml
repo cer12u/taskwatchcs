@@ -1,22 +1,25 @@
 <Window x:Class="TaskManager.SettingsDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="設定" Height="200" Width="300"
+        Title="設定" Height="300" Width="400"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- リセット時刻設定 -->
         <TextBlock Text="完了済みタスクのリセット時刻"
                  Grid.Row="0"
                  Margin="0,0,0,10"/>
 
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -44,13 +47,48 @@
                      VerticalAlignment="Center"/>
         </Grid>
 
-        <TextBlock Grid.Row="2"
-                 Text="※指定した時刻に完了済みタスクを自動的にアーカイブします。"
+        <!-- 通知設定 -->
+        <GroupBox Grid.Row="2" Header="通知設定" Margin="0,0,0,20">
+            <StackPanel Margin="10">
+                <CheckBox x:Name="NotificationsEnabledCheckBox"
+                         Content="通知を有効にする"
+                         Margin="0,0,0,10"/>
+
+                <Grid Margin="20,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="通知間隔:"
+                             Grid.Column="0"
+                             Margin="0,0,10,0"
+                             VerticalAlignment="Center"/>
+
+                    <ComboBox x:Name="NotificationIntervalComboBox"
+                            Grid.Column="1"
+                            Width="60"
+                            Margin="0,0,5,0"/>
+
+                    <TextBlock Text="分"
+                             Grid.Column="2"
+                             VerticalAlignment="Center"/>
+                </Grid>
+
+                <CheckBox x:Name="EstimatedTimeNotificationCheckBox"
+                         Content="予定時間を超過したときに通知する"
+                         Margin="20,0,0,0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <TextBlock Grid.Row="3"
+                 Text="※設定した時刻に完了済みタスクを自動的にアーカイブします。"
                  TextWrapping="Wrap"
-                 Margin="0,10"
+                 Margin="0,0,0,10"
                  Foreground="Gray"/>
 
-        <StackPanel Grid.Row="3"
+        <StackPanel Grid.Row="5"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right">
             <Button Content="OK"

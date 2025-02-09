@@ -24,6 +24,21 @@ namespace TaskManager
         public DateTime LastResetTime { get; set; } = DateTime.MinValue;
 
         /// <summary>
+        /// 通知機能の有効/無効
+        /// </summary>
+        public bool NotificationsEnabled { get; set; } = true;
+
+        /// <summary>
+        /// 定期通知の間隔（分）
+        /// </summary>
+        public int NotificationInterval { get; set; } = 30;
+
+        /// <summary>
+        /// 予定時間超過の通知を有効にするかどうか
+        /// </summary>
+        public bool EstimatedTimeNotificationEnabled { get; set; } = true;
+
+        /// <summary>
         /// アーカイブされた完了済みタスクのファイルパスを生成
         /// </summary>
         /// <param name="date">対象日付</param>

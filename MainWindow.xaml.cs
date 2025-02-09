@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Toolkit.Uwp.Notifications; // Windows 10 通知用
 
 namespace TaskManager
 {
@@ -19,6 +20,7 @@ namespace TaskManager
         private readonly DispatcherTimer timer = new();
         private readonly DispatcherTimer resetCheckTimer = new();
         private readonly DispatcherTimer inactiveCheckTimer = new();
+        private readonly DispatcherTimer notificationTimer = new();
         private static readonly TimeSpan InactiveDuration = TimeSpan.FromHours(72); // 3日間
         private DateTime startTime;
         private bool isRunning = false;
@@ -30,6 +32,7 @@ namespace TaskManager
         private readonly TaskItem otherTask;
         private DateTime? lastTickTime;
         private TimeSpan baseElapsedTime;
+        private DateTime lastNotificationTime;
 
         /// <summary>
         /// メインウィンドウのコンストラクタ
@@ -43,6 +46,7 @@ namespace TaskManager
             InitializeStopwatch();
             InitializeResetTimer();
             InitializeInactiveCheckTimer();
+            InitializeNotificationTimer();
             InitializeTasks();
             LoadTasks();
             CheckAndArchiveTasks();
@@ -79,6 +83,73 @@ namespace TaskManager
             inactiveCheckTimer.Interval = TimeSpan.FromHours(1); // 1時間ごとにチェック
             inactiveCheckTimer.Tick += InactiveCheckTimer_Tick;
             inactiveCheckTimer.Start();
+        }
+
+        /// <summary>
+        /// 通知タイマーの初期化
+        /// </summary>
+        private void InitializeNotificationTimer()
+        {
+            notificationTimer.Interval = TimeSpan.FromMinutes(1); // 1分ごとにチェック
+            notificationTimer.Tick += NotificationTimer_Tick;
+            notificationTimer.Start();
+            lastNotificationTime = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 通知タイマーのTick処理
+        /// </summary>
+        private void NotificationTimer_Tick(object? sender, EventArgs e)
+        {
+            var settings = Settings.Instance;
+            if (!settings.NotificationsEnabled || !isRunning)
+                return;
+
+            var currentTask = GetSelectedTask();
+            if (currentTask == null)
+                return;
+
+            var now = DateTime.Now;
+            var elapsedSinceLastNotification = now - lastNotificationTime;
+
+            // 定期通知のチェック
+            if (elapsedSinceLastNotification.TotalMinutes >= settings.NotificationInterval)
+            {
+                ShowNotification(
+                    "タスク実行中",
+                    $"{currentTask.Name}の作業時間が{settings.NotificationInterval}分経過しました。",
+                    "TaskInterval"
+                );
+                lastNotificationTime = now;
+            }
+
+            // 予定時間超過のチェック
+            if (settings.EstimatedTimeNotificationEnabled &&
+                currentTask.ElapsedTime > currentTask.EstimatedTime &&
+                currentTask.ElapsedTime.TotalMinutes % settings.NotificationInterval == 0)
+            {
+                ShowNotification(
+                    "予定時間超過",
+                    $"{currentTask.Name}が予定時間を{(currentTask.ElapsedTime - currentTask.EstimatedTime).TotalMinutes:0}分超過しています。",
+                    "TaskOvertime"
+                );
+            }
+        }
+
+        /// <summary>
+        /// 通知を表示
+        /// </summary>
+        private void ShowNotification(string title, string message, string tag)
+        {
+            new ToastContentBuilder()
+                .AddText(title)
+                .AddText(message)
+                .SetToastScenario(ToastScenario.Default)
+                .Show(toast =>
+                {
+                    toast.Tag = tag;
+                    toast.Group = "TaskManager";
+                });
         }
 
         /// <summary>

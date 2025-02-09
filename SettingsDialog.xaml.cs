@@ -8,13 +8,17 @@ namespace TaskManager
     /// </summary>
     public partial class SettingsDialog : Window
     {
+        private readonly Settings settings;
+
         /// <summary>
         /// コンストラクタ
         /// </summary>
         public SettingsDialog()
         {
             InitializeComponent();
+            settings = Settings.Instance;
             InitializeTimeComboBoxes();
+            InitializeNotificationSettings();
             LoadCurrentSettings();
         }
 
@@ -37,13 +41,46 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// 通知設定コントロールの初期化
+        /// </summary>
+        private void InitializeNotificationSettings()
+        {
+            // 通知間隔の選択肢を設定（5-60分、5分刻み）
+            for (int i = 5; i <= 60; i += 5)
+            {
+                NotificationIntervalComboBox.Items.Add(i);
+            }
+
+            // 通知設定の有効/無効に応じてコントロールの状態を更新
+            NotificationsEnabledCheckBox.Checked += (s, e) => UpdateNotificationControlsState();
+            NotificationsEnabledCheckBox.Unchecked += (s, e) => UpdateNotificationControlsState();
+        }
+
+        /// <summary>
+        /// 通知関連コントロールの状態を更新
+        /// </summary>
+        private void UpdateNotificationControlsState()
+        {
+            bool isEnabled = NotificationsEnabledCheckBox.IsChecked ?? false;
+            NotificationIntervalComboBox.IsEnabled = isEnabled;
+            EstimatedTimeNotificationCheckBox.IsEnabled = isEnabled;
+        }
+
+        /// <summary>
         /// 現在の設定を読み込み
         /// </summary>
         private void LoadCurrentSettings()
         {
-            var settings = Settings.Instance;
+            // リセット時刻の設定
             HoursComboBox.SelectedItem = settings.ResetTime.Hours;
             MinutesComboBox.SelectedItem = settings.ResetTime.Minutes - (settings.ResetTime.Minutes % 5);
+
+            // 通知設定
+            NotificationsEnabledCheckBox.IsChecked = settings.NotificationsEnabled;
+            NotificationIntervalComboBox.SelectedItem = settings.NotificationInterval;
+            EstimatedTimeNotificationCheckBox.IsChecked = settings.EstimatedTimeNotificationEnabled;
+
+            UpdateNotificationControlsState();
         }
 
         /// <summary>
@@ -60,11 +97,22 @@ namespace TaskManager
                 return;
             }
 
+            if (NotificationsEnabledCheckBox.IsChecked == true && NotificationIntervalComboBox.SelectedItem == null)
+            {
+                MessageBox.Show("通知間隔を選択してください。", 
+                              "エラー", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Warning);
+                return;
+            }
+
             var hours = (int)HoursComboBox.SelectedItem;
             var minutes = (int)MinutesComboBox.SelectedItem;
 
-            var settings = Settings.Instance;
             settings.ResetTime = new TimeSpan(hours, minutes, 0);
+            settings.NotificationsEnabled = NotificationsEnabledCheckBox.IsChecked ?? false;
+            settings.NotificationInterval = (int)(NotificationIntervalComboBox.SelectedItem ?? 30);
+            settings.EstimatedTimeNotificationEnabled = EstimatedTimeNotificationCheckBox.IsChecked ?? false;
             settings.Save();
 
             DialogResult = true;
