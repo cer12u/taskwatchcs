@@ -11,8 +11,8 @@ namespace TaskManager
     /// </summary>
     public class TaskItem : INotifyPropertyChanged
     {
-        private string name;
-        private string memo;
+        private string name = string.Empty;
+        private string memo = string.Empty;
         private TimeSpan elapsedTime;
         private bool isCompleted;
 
@@ -86,13 +86,13 @@ namespace TaskManager
         /// <summary>
         /// プロパティ変更通知イベント
         /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         /// <summary>
         /// プロパティ変更通知を発行
         /// </summary>
         /// <param name="propertyName">変更されたプロパティ名</param>
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
@@ -103,11 +103,6 @@ namespace TaskManager
         [JsonConstructor]
         public TaskItem()
         {
-            Name = "";
-            Memo = "";
-            EstimatedTime = TimeSpan.Zero;
-            ElapsedTime = TimeSpan.Zero;
-            IsCompleted = false;
             CreatedAt = DateTime.Now;
         }
 

@@ -15,17 +15,17 @@ namespace TaskManager
     /// </summary>
     public partial class MainWindow : Window
     {
-        private DispatcherTimer timer;                 // ストップウォッチ用タイマー
-        private DateTime startTime;                    // 計測開始時刻
-        private bool isRunning = false;               // タイマー実行状態
-        private ObservableCollection<TaskItem> tasks;  // アクティブなタスクのコレクション
-        private ObservableCollection<TaskItem> completedTasks;  // 完了済みタスクのコレクション
-        private readonly string taskSaveFile = "tasks.json";  // タスク保存ファイル
-        private readonly string completedTaskSaveFile = "completed_tasks.json";  // 完了済みタスク保存ファイル
-        private TaskLogger logger;                    // 作業ログ管理
-        private TaskItem otherTask;                   // その他の作業用タスク
-        private DateTime? lastTickTime;               // 前回のタイマー更新時刻
-        private TimeSpan baseElapsedTime;            // タスクの累積時間
+        private readonly DispatcherTimer timer = new();
+        private DateTime startTime;
+        private bool isRunning = false;
+        private readonly ObservableCollection<TaskItem> tasks = new();
+        private readonly ObservableCollection<TaskItem> completedTasks = new();
+        private readonly string taskSaveFile = "tasks.json";
+        private readonly string completedTaskSaveFile = "completed_tasks.json";
+        private readonly TaskLogger logger;
+        private readonly TaskItem otherTask;
+        private DateTime? lastTickTime;
+        private TimeSpan baseElapsedTime;
 
         /// <summary>
         /// メインウィンドウのコンストラクタ
@@ -33,23 +33,14 @@ namespace TaskManager
         public MainWindow()
         {
             InitializeComponent();
+            logger = new TaskLogger();
+            otherTask = new TaskItem("その他", "選択されていないときの作業時間", TimeSpan.FromHours(24));
+
             InitializeStopwatch();
             InitializeTasks();
             LoadTasks();
-            InitializeLogger();
 
             TaskList.MouseDoubleClick += TaskList_MouseDoubleClick;
-            
-            // その他の作業用タスクを作成
-            otherTask = new TaskItem("その他", "選択されていないときの作業時間", TimeSpan.FromHours(24));
-        }
-
-        /// <summary>
-        /// ログ管理の初期化
-        /// </summary>
-        private void InitializeLogger()
-        {
-            logger = new TaskLogger();
         }
 
         /// <summary>
@@ -57,7 +48,6 @@ namespace TaskManager
         /// </summary>
         private void InitializeStopwatch()
         {
-            timer = new DispatcherTimer();
             timer.Interval = TimeSpan.FromMilliseconds(100);
             timer.Tick += Timer_Tick;
             StopButton.IsEnabled = false;
@@ -69,8 +59,6 @@ namespace TaskManager
         /// </summary>
         private void InitializeTasks()
         {
-            tasks = new ObservableCollection<TaskItem>();
-            completedTasks = new ObservableCollection<TaskItem>();
             TaskList.ItemsSource = tasks;
         }
 
@@ -78,7 +66,7 @@ namespace TaskManager
         /// タイマーのTick毎の処理
         /// 経過時間の表示を更新します
         /// </summary>
-        private void Timer_Tick(object sender, EventArgs e)
+        private void Timer_Tick(object? sender, EventArgs e)
         {
             var now = DateTime.Now;
             TimeSpan currentElapsed = now - startTime;
@@ -150,7 +138,7 @@ namespace TaskManager
         /// <summary>
         /// タスク選択変更時の処理
         /// </summary>
-        private void TaskList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void TaskList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (isRunning)
             {
