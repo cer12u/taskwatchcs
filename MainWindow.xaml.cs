@@ -11,7 +11,6 @@ namespace TaskManager
         private DateTime startTime;
         private bool isRunning = false;
         private ObservableCollection<TaskItem> tasks;
-        private int taskCounter = 1;
 
         public MainWindow()
         {
@@ -30,13 +29,7 @@ namespace TaskManager
 
         private void InitializeTasks()
         {
-            tasks = new ObservableCollection<TaskItem>
-            {
-                new TaskItem("タスク1"),
-                new TaskItem("タスク2"),
-                new TaskItem("タスク3")
-            };
-            taskCounter = 4; // Start counter after initial tasks
+            tasks = new ObservableCollection<TaskItem>();
             TaskList.ItemsSource = tasks;
         }
 
@@ -79,9 +72,15 @@ namespace TaskManager
 
         private void AddTask_Click(object sender, RoutedEventArgs e)
         {
-            var newTask = new TaskItem($"タスク{taskCounter}");
-            tasks.Add(newTask);
-            taskCounter++;
+            var inputWindow = new TaskInputWindow
+            {
+                Owner = this
+            };
+
+            if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
+            {
+                tasks.Add(inputWindow.CreatedTask);
+            }
         }
     }
 }
