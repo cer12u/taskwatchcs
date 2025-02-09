@@ -18,6 +18,8 @@ namespace TaskManager
     {
         private readonly DispatcherTimer timer = new();
         private readonly DispatcherTimer resetCheckTimer = new();
+        private readonly DispatcherTimer inactiveCheckTimer = new();
+        private static readonly TimeSpan InactiveDuration = TimeSpan.FromHours(72); // 3日間
         private DateTime startTime;
         private bool isRunning = false;
         private readonly ObservableCollection<TaskItem> inProgressTasks = new();
@@ -40,9 +42,11 @@ namespace TaskManager
 
             InitializeStopwatch();
             InitializeResetTimer();
+            InitializeInactiveCheckTimer();
             InitializeTasks();
             LoadTasks();
             CheckAndArchiveTasks();
+            CheckInactiveTasks();
         }
 
         /// <summary>
@@ -68,11 +72,53 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// 非アクティブタスクチェックタイマーの初期化
+        /// </summary>
+        private void InitializeInactiveCheckTimer()
+        {
+            inactiveCheckTimer.Interval = TimeSpan.FromHours(1); // 1時間ごとにチェック
+            inactiveCheckTimer.Tick += InactiveCheckTimer_Tick;
+            inactiveCheckTimer.Start();
+        }
+
+        /// <summary>
+        /// 非アクティブタスクのチェックとステータス変更
+        /// </summary>
+        private void InactiveCheckTimer_Tick(object? sender, EventArgs e)
+        {
+            CheckInactiveTasks();
+        }
+
+        /// <summary>
+        /// 非アクティブタスクを保留状態に移動
+        /// </summary>
+        private void CheckInactiveTasks()
+        {
+            var inactiveTasks = inProgressTasks
+                .Where(task => task.IsInactive(InactiveDuration))
+                .ToList();
+
+            foreach (var task in inactiveTasks)
+            {
+                inProgressTasks.Remove(task);
+                task.SetPending();
+                pendingTasks.Add(task);
+                logger.LogTaskStop(task, TimeSpan.Zero);
+            }
+
+            if (inactiveTasks.Any())
+            {
+                SaveTasks();
+            }
+        }
+
+        /// <summary>
         /// リセット時刻の確認とタスクのアーカイブ処理
         /// </summary>
         private void ResetCheckTimer_Tick(object? sender, EventArgs e)
         {
             CheckAndArchiveTasks();
+            CheckInactiveTasks();
         }
 
         /// <summary>
@@ -415,6 +461,7 @@ namespace TaskManager
                 StopTimer();
             }
             resetCheckTimer.Stop();
+            inactiveCheckTimer.Stop();
             SaveTasks();
             CheckAndArchiveTasks();
         }

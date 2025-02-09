@@ -27,6 +27,22 @@ namespace TaskManager
         private TaskStatus status;
 
         /// <summary>
+        /// タスクの一意識別子
+        /// タイムスタンプベースのUUID
+        /// </summary>
+        public string Id { get; private set; }
+
+        /// <summary>
+        /// タスクの作成日時
+        /// </summary>
+        public DateTime CreatedAt { get; private set; }
+
+        /// <summary>
+        /// タスクの最終作業日時
+        /// </summary>
+        public DateTime LastWorkedAt { get; private set; }
+
+        /// <summary>
         /// タスクの名前
         /// </summary>
         public string Name
@@ -86,12 +102,7 @@ namespace TaskManager
         /// <summary>
         /// タスクの完了日時
         /// </summary>
-        public DateTime? CompletedAt { get; set; }
-
-        /// <summary>
-        /// タスクの作成日時
-        /// </summary>
-        public DateTime CreatedAt { get; set; }
+        public DateTime? CompletedAt { get; private set; }
 
         /// <summary>
         /// プロパティ変更通知イベント
@@ -108,12 +119,25 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// タイムスタンプベースのUUIDを生成
+        /// </summary>
+        private static string GenerateTimeBasedUuid()
+        {
+            var now = DateTime.UtcNow;
+            var ticks = now.Ticks;
+            var guid = Guid.NewGuid();
+            return $"{ticks:x16}-{guid:N}";
+        }
+
+        /// <summary>
         /// JSONデシリアライズ用のコンストラクタ
         /// </summary>
         [JsonConstructor]
         public TaskItem()
         {
+            Id = GenerateTimeBasedUuid();
             CreatedAt = DateTime.Now;
+            LastWorkedAt = CreatedAt;
             Status = TaskStatus.InProgress;
         }
 
@@ -125,12 +149,14 @@ namespace TaskManager
         /// <param name="estimatedTime">予定時間</param>
         public TaskItem(string name, string memo, TimeSpan estimatedTime)
         {
+            Id = GenerateTimeBasedUuid();
             Name = name;
             Memo = memo;
             EstimatedTime = estimatedTime;
             ElapsedTime = TimeSpan.Zero;
             Status = TaskStatus.InProgress;
             CreatedAt = DateTime.Now;
+            LastWorkedAt = CreatedAt;
         }
 
         /// <summary>
@@ -140,6 +166,7 @@ namespace TaskManager
         {
             Status = TaskStatus.Completed;
             CompletedAt = DateTime.Now;
+            UpdateLastWorkedTime();
         }
 
         /// <summary>
@@ -148,6 +175,7 @@ namespace TaskManager
         public void SetPending()
         {
             Status = TaskStatus.Pending;
+            UpdateLastWorkedTime();
         }
 
         /// <summary>
@@ -156,6 +184,7 @@ namespace TaskManager
         public void SetInProgress()
         {
             Status = TaskStatus.InProgress;
+            UpdateLastWorkedTime();
         }
 
         /// <summary>
@@ -165,6 +194,25 @@ namespace TaskManager
         public void AddElapsedTime(TimeSpan duration)
         {
             ElapsedTime += duration;
+            UpdateLastWorkedTime();
+        }
+
+        /// <summary>
+        /// 最終作業時刻を更新
+        /// </summary>
+        private void UpdateLastWorkedTime()
+        {
+            LastWorkedAt = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 最後の作業から指定時間が経過しているかチェック
+        /// </summary>
+        /// <param name="duration">経過時間</param>
+        /// <returns>指定時間が経過している場合はtrue</returns>
+        public bool IsInactive(TimeSpan duration)
+        {
+            return DateTime.Now - LastWorkedAt > duration;
         }
     }
 }
