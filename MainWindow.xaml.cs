@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,10 +19,10 @@ namespace TaskManager
         private readonly DispatcherTimer timer = new();
         private DateTime startTime;
         private bool isRunning = false;
-        private readonly ObservableCollection<TaskItem> tasks = new();
+        private readonly ObservableCollection<TaskItem> inProgressTasks = new();
+        private readonly ObservableCollection<TaskItem> pendingTasks = new();
         private readonly ObservableCollection<TaskItem> completedTasks = new();
         private readonly string taskSaveFile = "tasks.json";
-        private readonly string completedTaskSaveFile = "completed_tasks.json";
         private readonly TaskLogger logger;
         private readonly TaskItem otherTask;
         private DateTime? lastTickTime;
@@ -39,8 +40,6 @@ namespace TaskManager
             InitializeStopwatch();
             InitializeTasks();
             LoadTasks();
-
-            TaskList.MouseDoubleClick += TaskList_MouseDoubleClick;
         }
 
         /// <summary>
@@ -59,7 +58,9 @@ namespace TaskManager
         /// </summary>
         private void InitializeTasks()
         {
-            TaskList.ItemsSource = tasks;
+            InProgressList.ItemsSource = inProgressTasks;
+            PendingList.ItemsSource = pendingTasks;
+            CompletedList.ItemsSource = completedTasks;
         }
 
         /// <summary>
@@ -86,6 +87,16 @@ namespace TaskManager
         {
             if (!isRunning)
             {
+                var selectedTask = GetSelectedTask();
+                if (selectedTask?.Status == TaskStatus.Pending)
+                {
+                    MessageBox.Show("保留中のタスクは開始できません。\n再開ボタンを使用してください。", 
+                                  "警告", 
+                                  MessageBoxButton.OK, 
+                                  MessageBoxImage.Warning);
+                    return;
+                }
+
                 startTime = DateTime.Now;
                 lastTickTime = startTime;
                 timer.Start();
@@ -93,7 +104,7 @@ namespace TaskManager
                 StartButton.IsEnabled = false;
                 StopButton.IsEnabled = true;
 
-                var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
+                var currentTask = selectedTask ?? otherTask;
                 logger.LogTaskStart(currentTask);
             }
         }
@@ -121,7 +132,7 @@ namespace TaskManager
                 StartButton.IsEnabled = true;
                 StopButton.IsEnabled = false;
 
-                var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
+                var currentTask = GetSelectedTask() ?? otherTask;
                 var duration = DateTime.Now - startTime;
                 currentTask.AddElapsedTime(duration);
                 baseElapsedTime = currentTask.ElapsedTime;
@@ -145,7 +156,7 @@ namespace TaskManager
                 StopTimer();
             }
 
-            var currentTask = TaskList.SelectedItem as TaskItem ?? otherTask;
+            var currentTask = GetSelectedTask() ?? otherTask;
             baseElapsedTime = currentTask.ElapsedTime;
             StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
             StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
@@ -154,11 +165,21 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// 現在選択中のタスクを取得
+        /// </summary>
+        private TaskItem? GetSelectedTask()
+        {
+            return InProgressList.SelectedItem as TaskItem ??
+                   PendingList.SelectedItem as TaskItem ??
+                   CompletedList.SelectedItem as TaskItem;
+        }
+
+        /// <summary>
         /// 現在選択中のタスク名を表示更新
         /// </summary>
         private void UpdateCurrentTaskDisplay()
         {
-            var currentTask = TaskList.SelectedItem as TaskItem;
+            var currentTask = GetSelectedTask();
             CurrentTaskName.Text = currentTask != null 
                 ? $"選択タスク: {currentTask.Name}"
                 : "選択タスク: その他";
@@ -171,7 +192,18 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
-                tasks.Remove(task);
+                switch (task.Status)
+                {
+                    case TaskStatus.InProgress:
+                        inProgressTasks.Remove(task);
+                        break;
+                    case TaskStatus.Pending:
+                        pendingTasks.Remove(task);
+                        break;
+                    case TaskStatus.Completed:
+                        completedTasks.Remove(task);
+                        break;
+                }
                 SaveTasks();
             }
         }
@@ -183,17 +215,68 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
-                if (isRunning && TaskList.SelectedItem == task)
+                if (isRunning && GetSelectedTask() == task)
                 {
                     StopTimer();
                 }
 
+                switch (task.Status)
+                {
+                    case TaskStatus.InProgress:
+                        inProgressTasks.Remove(task);
+                        break;
+                    case TaskStatus.Pending:
+                        pendingTasks.Remove(task);
+                        break;
+                }
+
                 task.Complete();
-                tasks.Remove(task);
                 completedTasks.Add(task);
                 logger.LogTaskComplete(task);
                 SaveTasks();
-                SaveCompletedTasks();
+            }
+        }
+
+        /// <summary>
+        /// タスクを保留状態に変更
+        /// </summary>
+        private void SetPendingTask_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is TaskItem task)
+            {
+                if (isRunning && GetSelectedTask() == task)
+                {
+                    StopTimer();
+                }
+
+                inProgressTasks.Remove(task);
+                task.SetPending();
+                pendingTasks.Add(task);
+                logger.LogTaskStop(task, TimeSpan.Zero);
+                SaveTasks();
+            }
+        }
+
+        /// <summary>
+        /// タスクを進行中状態に変更
+        /// </summary>
+        private void SetInProgressTask_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is TaskItem task)
+            {
+                switch (task.Status)
+                {
+                    case TaskStatus.Pending:
+                        pendingTasks.Remove(task);
+                        break;
+                    case TaskStatus.Completed:
+                        completedTasks.Remove(task);
+                        break;
+                }
+
+                task.SetInProgress();
+                inProgressTasks.Add(task);
+                SaveTasks();
             }
         }
 
@@ -209,29 +292,8 @@ namespace TaskManager
 
             if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
             {
-                tasks.Add(inputWindow.CreatedTask);
+                inProgressTasks.Add(inputWindow.CreatedTask);
                 SaveTasks();
-            }
-        }
-
-        /// <summary>
-        /// タスクダブルクリック時の処理（編集）
-        /// </summary>
-        private void TaskList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (TaskList.SelectedItem is TaskItem selectedTask)
-            {
-                var dialog = new TaskEditDialog(selectedTask.Name, selectedTask.Memo)
-                {
-                    Owner = this
-                };
-
-                if (dialog.ShowDialog() == true)
-                {
-                    selectedTask.Name = dialog.TaskName;
-                    selectedTask.Memo = dialog.Memo;
-                    SaveTasks();
-                }
             }
         }
 
@@ -244,29 +306,6 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// 完了済みタスク一覧表示
-        /// </summary>
-        private void ShowCompletedTasks_Click(object sender, RoutedEventArgs e)
-        {
-            var message = new System.Text.StringBuilder();
-            message.AppendLine("完了済みタスク:");
-            
-            foreach (var task in completedTasks)
-            {
-                message.AppendLine($"- {task.Name}");
-                message.AppendLine($"  完了日時: {task.CompletedAt:yyyy/MM/dd HH:mm:ss}");
-                message.AppendLine($"  合計時間: {task.ElapsedTime:hh\\:mm\\:ss}");
-                if (!string.IsNullOrWhiteSpace(task.Memo))
-                {
-                    message.AppendLine($"  メモ: {task.Memo}");
-                }
-                message.AppendLine();
-            }
-
-            MessageBox.Show(message.ToString(), "完了済みタスク一覧", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        /// <summary>
         /// アプリケーション終了時の処理
         /// </summary>
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -276,7 +315,6 @@ namespace TaskManager
                 StopTimer();
             }
             SaveTasks();
-            SaveCompletedTasks();
         }
 
         /// <summary>
@@ -285,7 +323,6 @@ namespace TaskManager
         private void SaveTasks_Click(object sender, RoutedEventArgs e)
         {
             SaveTasks();
-            SaveCompletedTasks();
             MessageBox.Show("タスクを保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -299,13 +336,20 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// アクティブなタスクを保存
+        /// タスクを保存
         /// </summary>
         private void SaveTasks()
         {
             try
             {
-                var json = JsonSerializer.Serialize(tasks);
+                var allTasks = new
+                {
+                    InProgress = inProgressTasks,
+                    Pending = pendingTasks,
+                    Completed = completedTasks
+                };
+
+                var json = JsonSerializer.Serialize(allTasks);
                 File.WriteAllText(taskSaveFile, json);
             }
             catch (Exception ex)
@@ -318,51 +362,33 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// 完了済みタスクを保存
-        /// </summary>
-        private void SaveCompletedTasks()
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(completedTasks);
-                File.WriteAllText(completedTaskSaveFile, json);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"完了済みタスクの保存中にエラーが発生しました。\n{ex.Message}", 
-                              "エラー", 
-                              MessageBoxButton.OK, 
-                              MessageBoxImage.Error);
-            }
-        }
-
-        /// <summary>
-        /// すべてのタスクを読み込み
+        /// タスクを読み込み
         /// </summary>
         private void LoadTasks()
-        {
-            LoadActiveTasks();
-            LoadCompletedTasks();
-        }
-
-        /// <summary>
-        /// アクティブなタスクを読み込み
-        /// </summary>
-        private void LoadActiveTasks()
         {
             try
             {
                 if (File.Exists(taskSaveFile))
                 {
                     var json = File.ReadAllText(taskSaveFile);
-                    var loadedTasks = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json);
-                    if (loadedTasks != null)
+                    var data = JsonSerializer.Deserialize<TaskData>(json);
+                    if (data != null)
                     {
-                        tasks.Clear();
-                        foreach (var task in loadedTasks)
-                        {
-                            tasks.Add(task);
-                        }
+                        inProgressTasks.Clear();
+                        pendingTasks.Clear();
+                        completedTasks.Clear();
+
+                        if (data.InProgress != null)
+                            foreach (var task in data.InProgress)
+                                inProgressTasks.Add(task);
+
+                        if (data.Pending != null)
+                            foreach (var task in data.Pending)
+                                pendingTasks.Add(task);
+
+                        if (data.Completed != null)
+                            foreach (var task in data.Completed)
+                                completedTasks.Add(task);
                     }
                 }
             }
@@ -376,33 +402,13 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// 完了済みタスクを読み込み
+        /// JSON保存用のデータ構造
         /// </summary>
-        private void LoadCompletedTasks()
+        private class TaskData
         {
-            try
-            {
-                if (File.Exists(completedTaskSaveFile))
-                {
-                    var json = File.ReadAllText(completedTaskSaveFile);
-                    var loaded = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json);
-                    if (loaded != null)
-                    {
-                        completedTasks.Clear();
-                        foreach (var task in loaded)
-                        {
-                            completedTasks.Add(task);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"完了済みタスクの読み込み中にエラーが発生しました。\n{ex.Message}", 
-                              "エラー", 
-                              MessageBoxButton.OK, 
-                              MessageBoxImage.Error);
-            }
+            public TaskItem[]? InProgress { get; set; }
+            public TaskItem[]? Pending { get; set; }
+            public TaskItem[]? Completed { get; set; }
         }
     }
 }

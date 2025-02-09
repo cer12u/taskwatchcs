@@ -6,6 +6,16 @@ using System.Text.Json.Serialization;
 namespace TaskManager
 {
     /// <summary>
+    /// タスクのステータスを表す列挙型
+    /// </summary>
+    public enum TaskStatus
+    {
+        InProgress,  // 進行中
+        Pending,     // 保留中
+        Completed    // 完了
+    }
+
+    /// <summary>
     /// タスクの情報を管理するクラス。
     /// INotifyPropertyChangedを実装し、UIへの自動更新を提供します。
     /// </summary>
@@ -14,7 +24,7 @@ namespace TaskManager
         private string name = string.Empty;
         private string memo = string.Empty;
         private TimeSpan elapsedTime;
-        private bool isCompleted;
+        private TaskStatus status;
 
         /// <summary>
         /// タスクの名前
@@ -61,14 +71,14 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// タスクの完了状態
+        /// タスクのステータス
         /// </summary>
-        public bool IsCompleted
+        public TaskStatus Status
         {
-            get => isCompleted;
+            get => status;
             set
             {
-                isCompleted = value;
+                status = value;
                 OnPropertyChanged();
             }
         }
@@ -104,6 +114,7 @@ namespace TaskManager
         public TaskItem()
         {
             CreatedAt = DateTime.Now;
+            Status = TaskStatus.InProgress;
         }
 
         /// <summary>
@@ -118,7 +129,7 @@ namespace TaskManager
             Memo = memo;
             EstimatedTime = estimatedTime;
             ElapsedTime = TimeSpan.Zero;
-            IsCompleted = false;
+            Status = TaskStatus.InProgress;
             CreatedAt = DateTime.Now;
         }
 
@@ -127,8 +138,24 @@ namespace TaskManager
         /// </summary>
         public void Complete()
         {
-            IsCompleted = true;
+            Status = TaskStatus.Completed;
             CompletedAt = DateTime.Now;
+        }
+
+        /// <summary>
+        /// タスクを保留状態にする
+        /// </summary>
+        public void SetPending()
+        {
+            Status = TaskStatus.Pending;
+        }
+
+        /// <summary>
+        /// タスクを進行中状態にする
+        /// </summary>
+        public void SetInProgress()
+        {
+            Status = TaskStatus.InProgress;
         }
 
         /// <summary>
