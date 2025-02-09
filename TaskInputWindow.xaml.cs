@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Interop;
 
 namespace TaskManager
 {
@@ -11,6 +12,12 @@ namespace TaskManager
         {
             InitializeComponent();
             InitializeTimeComboBoxes();
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            TitleTextBox.Focus(); // バックアップとしてフォーカスを設定
         }
 
         private void InitializeTimeComboBoxes()
@@ -37,6 +44,7 @@ namespace TaskManager
             if (string.IsNullOrWhiteSpace(TitleTextBox.Text))
             {
                 MessageBox.Show("タイトルを入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TitleTextBox.Focus();
                 return;
             }
 
