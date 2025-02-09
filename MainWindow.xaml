@@ -47,12 +47,18 @@
                         <ListBox x:Name="TaskList" 
                                 Margin="5"
                                 HorizontalContentAlignment="Stretch">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0,5"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderBrush="#DDDDDD" 
                                             BorderThickness="1" 
                                             CornerRadius="4" 
-                                            Margin="0,5"
                                             Padding="10"
                                             Background="#F8F8F8">
                                         <Grid>
@@ -94,13 +100,24 @@
                                                     VerticalAlignment="Top"
                                                     Click="DeleteTask_Click"/>
 
-                                            <!-- Memo -->
+                                            <!-- Memo (Only visible when selected) -->
                                             <TextBlock Grid.Row="1"
                                                      Grid.ColumnSpan="3"
                                                      Text="{Binding Memo}"
                                                      Margin="0,8,0,0"
                                                      TextWrapping="Wrap"
-                                                     Opacity="0.7"/>
+                                                     Opacity="0.7">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
