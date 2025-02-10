@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -337,40 +337,13 @@ namespace TaskManager
 
                 var duration = DateTime.Now - startTime;
 
-                // その他タスクの場合、新規タスク作成を提案
+                // その他タスクの場合、自動的に新規タスクを作成
                 if (runningTask == null)
                 {
-                    var result = MessageBox.Show(
-                        $"「その他」で {duration:hh\\:mm} の作業時間が記録されました。\n新しいタスクを作成しますか？",
-                        "タスク作成",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question);
-
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        var inputWindow = new TaskInputWindow(duration)
-                        {
-                            Owner = this
-                        };
-
-                        if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
-                        {
-                            inProgressTasks.Add(inputWindow.CreatedTask);
-                            if (!inputWindow.AddOtherTime)
-                            {
-                                otherTask.AddElapsedTime(duration);
-                            }
-                            SaveTasks();
-                        }
-                        else
-                        {
-                            otherTask.AddElapsedTime(duration);
-                        }
-                    }
-                    else
-                    {
-                        otherTask.AddElapsedTime(duration);
-                    }
+                    var taskName = $"その他 ({DateTime.Now:MM/dd HH:mm})";
+                    var newTask = new TaskItem(taskName, $"{duration:hh\\:mm} の作業", TimeSpan.FromHours(24));
+                    newTask.AddElapsedTime(duration);
+                    inProgressTasks.Add(newTask);
                 }
                 else
                 {
@@ -416,6 +389,18 @@ namespace TaskManager
                 if (listBox != InProgressList) InProgressList.SelectedItem = null;
                 if (listBox != PendingList) PendingList.SelectedItem = null;
                 if (listBox != CompletedList) CompletedList.SelectedItem = null;
+
+                // リストの空白部分をクリックした場合は選択を解除
+                if (e.AddedItems.Count == 0)
+                {
+                    listBox.SelectedItem = null;
+                }
+            }
+
+            // タイマー実行中の場合は停止
+            if (isRunning)
+            {
+                StopTimer();
             }
 
             var selectedTask = GetSelectedTask();
@@ -581,7 +566,13 @@ namespace TaskManager
         /// </summary>
         private void AddTask_Click(object sender, RoutedEventArgs e)
         {
-            var inputWindow = new TaskInputWindow
+            // タイマー実行中の場合は停止して新規タスクを作成
+            if (isRunning)
+            {
+                StopTimer();
+            }
+
+            var inputWindow = new TaskInputWindow(runningTask == null ? DateTime.Now - startTime : null)
             {
                 Owner = this
             };
