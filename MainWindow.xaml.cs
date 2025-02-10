@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -337,13 +337,40 @@ namespace TaskManager
 
                 var duration = DateTime.Now - startTime;
 
-                // その他タスクの場合、自動的に新規タスクを作成
+                // その他タスクの場合、新規タスク作成を提案
                 if (runningTask == null)
                 {
-                    var taskName = $"その他 ({DateTime.Now:MM/dd HH:mm})";
-                    var newTask = new TaskItem(taskName, $"{duration:hh\\:mm} の作業", TimeSpan.FromHours(24));
-                    newTask.AddElapsedTime(duration);
-                    inProgressTasks.Add(newTask);
+                    var result = MessageBox.Show(
+                        $"「その他」で {duration:hh\\:mm} の作業時間が記録されました。\n新しいタスクを作成しますか？",
+                        "タスク作成",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        var inputWindow = new TaskInputWindow(duration)
+                        {
+                            Owner = this
+                        };
+
+                        if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
+                        {
+                            inProgressTasks.Add(inputWindow.CreatedTask);
+                            if (!inputWindow.AddOtherTime)
+                            {
+                                otherTask.AddElapsedTime(duration);
+                            }
+                            SaveTasks();
+                        }
+                        else
+                        {
+                            otherTask.AddElapsedTime(duration);
+                        }
+                    }
+                    else
+                    {
+                        otherTask.AddElapsedTime(duration);
+                    }
                 }
                 else
                 {
@@ -428,15 +455,21 @@ namespace TaskManager
         {
             if (sender is ListBox listBox && listBox.SelectedItem is TaskItem selectedTask)
             {
-                var dialog = new TaskEditDialog(selectedTask.Name, selectedTask.Memo)
+                var dialog = new TaskEditDialog(
+                    selectedTask.Name,
+                    selectedTask.Memo ?? "",
+                    selectedTask.EstimatedTime,
+                    selectedTask.ElapsedTime)
                 {
                     Owner = this
                 };
 
-                if (dialog.ShowDialog() == true)
+                if (dialog.ShowDialog() == true && dialog.TaskName != null)
                 {
                     selectedTask.Name = dialog.TaskName;
-                    selectedTask.Memo = dialog.Memo;
+                    selectedTask.Memo = dialog.Memo ?? "";
+                    selectedTask.EstimatedTime = dialog.EstimatedTime;
+                    selectedTask.ElapsedTime = dialog.ElapsedTime;
                     SaveTasks();
                 }
             }
@@ -566,13 +599,7 @@ namespace TaskManager
         /// </summary>
         private void AddTask_Click(object sender, RoutedEventArgs e)
         {
-            // タイマー実行中の場合は停止して新規タスクを作成
-            if (isRunning)
-            {
-                StopTimer();
-            }
-
-            var inputWindow = new TaskInputWindow(runningTask == null ? DateTime.Now - startTime : null)
+            var inputWindow = new TaskInputWindow
             {
                 Owner = this
             };
