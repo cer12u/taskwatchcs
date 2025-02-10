@@ -1,399 +1,337 @@
 ﻿<Window x:Class="TaskManager.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:TaskManager"
-        mc:Ignorable="d"
         Title="タスク管理" Height="600" Width="800"
-        Topmost="True"
-        Closing="Window_Closing">
-    <DockPanel>
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
         <!-- メニューバー -->
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="設定">
-                <MenuItem x:Name="TopMostMenuItem" 
-                         Header="最前面に表示" 
-                         IsCheckable="True"
-                         IsChecked="True"
-                         Click="TopMostMenuItem_Click"/>
+        <Menu Grid.Row="0">
+            <MenuItem Header="ファイル">
+                <MenuItem Header="保存" Click="SaveTasks_Click"/>
+                <MenuItem Header="読み込み" Click="LoadTasks_Click"/>
                 <Separator/>
-                <MenuItem Header="リセット時刻の設定" 
-                         Click="OpenSettings_Click"/>
-            </MenuItem>
-            <MenuItem Header="タスク">
-                <MenuItem Header="タスクを保存" 
-                         Click="SaveTasks_Click"/>
-                <MenuItem Header="タスクを読み込む" 
-                         Click="LoadTasks_Click"/>
+                <MenuItem Header="設定" Click="OpenSettings_Click"/>
+                <Separator/>
+                <MenuItem x:Name="TopMostMenuItem" Header="最前面に表示" IsCheckable="True" Click="TopMostMenuItem_Click"/>
             </MenuItem>
         </Menu>
 
-        <!-- メインコンテンツ -->
-        <Grid>
+        <!-- タイマー表示部分 -->
+        <Grid Grid.Row="1" Margin="10">
             <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="200"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Top Pane: Task List -->
-            <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" Margin="10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+            <TextBlock x:Name="CurrentTaskName" 
+                     Text="選択タスク: その他" 
+                     FontSize="16" 
+                     Margin="0,0,0,5"/>
 
-                    <!-- Task Tabs -->
-                    <TabControl Grid.Row="0" x:Name="TaskTabs">
-                        <!-- 進行中タスク -->
-                        <TabItem>
-                            <TabItem.Header>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="進行中"/>
-                                    <TextBlock Text="{Binding ElementName=InProgressList, Path=Items.Count, StringFormat=' ({0})'}" 
-                                             Margin="2,0,0,0"/>
-                                </StackPanel>
-                            </TabItem.Header>
-                            <ListBox x:Name="InProgressList"
-                                    Margin="5"
-                                    HorizontalContentAlignment="Stretch"
-                                    SelectionChanged="TaskList_SelectionChanged"
-                                    MouseDoubleClick="TaskList_MouseDoubleClick"
-                                    ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                    ScrollViewer.CanContentScroll="True">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="#DDDDDD" 
-                                                BorderThickness="1" 
-                                                CornerRadius="4" 
-                                                Padding="10"
-                                                Background="#F8F8F8">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-
-                                                <!-- Task Name -->
-                                                <TextBlock Grid.Column="0" 
-                                                         Text="{Binding Name}" 
-                                                         FontSize="14"
-                                                         FontWeight="Bold"
-                                                         VerticalAlignment="Center"/>
-
-                                                <!-- Time Information -->
-                                                <StackPanel Grid.Column="1" Margin="10,0">
-                                                    <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
-                                                             FontFamily="Consolas"
-                                                             FontSize="12"
-                                                             Margin="0,2"/>
-                                                    <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}', UpdateSourceTrigger=PropertyChanged}"
-                                                             FontFamily="Consolas"
-                                                             FontSize="12"
-                                                             Margin="0,2"/>
-                                                </StackPanel>
-
-                                                <!-- Status Buttons -->
-                                                <StackPanel Grid.Column="2" 
-                                                          Orientation="Horizontal"
-                                                          Margin="5,0">
-                                                    <Button Content="保留"
-                                                            Padding="10,5"
-                                                            Margin="0,0,5,0"
-                                                            Click="SetPendingTask_Click"/>
-                                                    <Button Content="完了"
-                                                            Padding="10,5"
-                                                            Click="CompleteTask_Click"/>
-                                                </StackPanel>
-
-                                                <!-- Delete Button -->
-                                                <Button Grid.Column="3"
-                                                        Content="削除"
-                                                        Padding="10,5"
-                                                        Click="DeleteTask_Click"/>
-
-                                                <!-- Memo -->
-                                                <TextBlock Grid.Row="1"
-                                                         Grid.ColumnSpan="4"
-                                                         Text="{Binding Memo}"
-                                                         Margin="0,8,0,0"
-                                                         TextWrapping="Wrap"
-                                                         Opacity="0.7">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </TabItem>
-
-                        <!-- 保留中タスク -->
-                        <TabItem>
-                            <TabItem.Header>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="保留中"/>
-                                    <TextBlock Text="{Binding ElementName=PendingList, Path=Items.Count, StringFormat=' ({0})'}" 
-                                             Margin="2,0,0,0"/>
-                                </StackPanel>
-                            </TabItem.Header>
-                            <ListBox x:Name="PendingList"
-                                    Margin="5"
-                                    HorizontalContentAlignment="Stretch"
-                                    SelectionChanged="TaskList_SelectionChanged"
-                                    MouseDoubleClick="TaskList_MouseDoubleClick"
-                                    ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                    ScrollViewer.CanContentScroll="True">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="#DDDDDD" 
-                                                BorderThickness="1" 
-                                                CornerRadius="4" 
-                                                Padding="10"
-                                                Background="#F8F8F8">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-
-                                                <!-- Task Name -->
-                                                <TextBlock Grid.Column="0" 
-                                                         Text="{Binding Name}" 
-                                                         FontSize="14"
-                                                         FontWeight="Bold"
-                                                         VerticalAlignment="Center"/>
-
-                                                <!-- Time Information -->
-                                                <StackPanel Grid.Column="1" Margin="10,0">
-                                                    <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
-                                                             FontFamily="Consolas"
-                                                             FontSize="12"
-                                                             Margin="0,2"/>
-                                                    <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}', UpdateSourceTrigger=PropertyChanged}"
-                                                             FontFamily="Consolas"
-                                                             FontSize="12"
-                                                             Margin="0,2"/>
-                                                </StackPanel>
-
-                                                <!-- Status Button -->
-                                                <Button Grid.Column="2"
-                                                        Content="再開"
-                                                        Padding="10,5"
-                                                        Margin="5,0"
-                                                        Click="SetInProgressTask_Click"/>
-
-                                                <!-- Delete Button -->
-                                                <Button Grid.Column="3"
-                                                        Content="削除"
-                                                        Padding="10,5"
-                                                        Click="DeleteTask_Click"/>
-
-                                                <!-- Memo -->
-                                                <TextBlock Grid.Row="1"
-                                                         Grid.ColumnSpan="4"
-                                                         Text="{Binding Memo}"
-                                                         Margin="0,8,0,0"
-                                                         TextWrapping="Wrap"
-                                                         Opacity="0.7">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </TabItem>
-
-                        <!-- 完了済みタスク -->
-                        <TabItem>
-                            <TabItem.Header>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="完了済み"/>
-                                    <TextBlock Text="{Binding ElementName=CompletedList, Path=Items.Count, StringFormat=' ({0})'}" 
-                                             Margin="2,0,0,0"/>
-                                </StackPanel>
-                            </TabItem.Header>
-                            <ListBox x:Name="CompletedList"
-                                    Margin="5"
-                                    HorizontalContentAlignment="Stretch"
-                                    SelectionChanged="TaskList_SelectionChanged"
-                                    MouseDoubleClick="TaskList_MouseDoubleClick"
-                                    ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                    ScrollViewer.CanContentScroll="True">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="#DDDDDD" 
-                                                BorderThickness="1" 
-                                                CornerRadius="4" 
-                                                Padding="10"
-                                                Background="#F8F8F8">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-
-                                                <!-- Task Name -->
-                                                <TextBlock Grid.Column="0" 
-                                                         Text="{Binding Name}" 
-                                                         FontSize="14"
-                                                         FontWeight="Bold"
-                                                         VerticalAlignment="Center"/>
-
-                                                <!-- Time Information -->
-                                                <StackPanel Grid.Column="1" Margin="10,0">
-                                                    <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
-                                                             FontFamily="Consolas"
-                                                             FontSize="12"
-                                                             Margin="0,2"/>
-                                                    <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}', UpdateSourceTrigger=PropertyChanged}"
-                                                             FontFamily="Consolas"
-                                                             FontSize="12"
-                                                             Margin="0,2"/>
-                                                    <TextBlock Text="{Binding CompletedAt, StringFormat='完了: {0:MM/dd HH:mm}'}"
-                                                             FontFamily="Consolas"
-                                                             FontSize="12"
-                                                             Margin="0,2"/>
-                                                </StackPanel>
-
-                                                <!-- Status Button -->
-                                                <Button Grid.Column="2"
-                                                        Content="再開"
-                                                        Padding="10,5"
-                                                        Margin="5,0"
-                                                        Click="SetInProgressTask_Click"/>
-
-                                                <!-- Delete Button -->
-                                                <Button Grid.Column="3"
-                                                        Content="削除"
-                                                        Padding="10,5"
-                                                        Click="DeleteTask_Click"/>
-
-                                                <!-- Memo -->
-                                                <TextBlock Grid.Row="1"
-                                                         Grid.ColumnSpan="4"
-                                                         Text="{Binding Memo}"
-                                                         Margin="0,8,0,0"
-                                                         TextWrapping="Wrap"
-                                                         Opacity="0.7">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </TabItem>
-                    </TabControl>
-
-                    <!-- Add Task Button -->
-                    <Button Grid.Row="1"
-                            Content="新規タスク追加"
-                            Height="40"
-                            Margin="5"
-                            Click="AddTask_Click"
-                            HorizontalAlignment="Stretch"
-                            Padding="20,0"/>
-                </Grid>
-            </Border>
-
-            <!-- Bottom Pane: Stopwatch -->
-            <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1" Margin="10">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Current Task Name -->
-                    <TextBlock x:Name="CurrentTaskName"
-                             Text="選択タスク: なし"
-                             FontSize="14"
-                             HorizontalAlignment="Center"
-                             Margin="0,0,0,10"/>
-
-                    <!-- Stopwatch Display -->
-                    <StackPanel Grid.Row="1" 
-                              Orientation="Horizontal"
-                              HorizontalAlignment="Center"
-                              Margin="0,0,0,20">
-                        <TextBlock x:Name="StopwatchDisplay" 
-                                 Text="00:00:00"
-                                 FontSize="48"/>
-                        <TextBlock x:Name="StopwatchMilliseconds"
-                                 Text=".0"
-                                 FontSize="24"
-                                 VerticalAlignment="Bottom"
-                                 Margin="0,0,0,8"/>
-                    </StackPanel>
-
-                    <!-- Control Buttons -->
-                    <StackPanel Grid.Row="2" 
-                              Orientation="Horizontal" 
-                              HorizontalAlignment="Center">
-                        <Button x:Name="StartButton"
-                                Content="開始"
-                                Width="100"
-                                Height="40"
-                                Margin="10,0"
-                                Click="StartButton_Click"/>
-                        <Button x:Name="StopButton"
-                                Content="停止"
-                                Width="100"
-                                Height="40"
-                                Margin="10,0"
-                                Click="StopButton_Click"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
+            <StackPanel Grid.Row="1" 
+                      Orientation="Horizontal" 
+                      HorizontalAlignment="Left">
+                <TextBlock x:Name="StopwatchDisplay" 
+                         Text="00:00:00" 
+                         FontSize="24" 
+                         FontFamily="Consolas"/>
+                <TextBlock x:Name="StopwatchMilliseconds" 
+                         Text=".0" 
+                         FontSize="16" 
+                         FontFamily="Consolas" 
+                         Margin="0,4,0,0"/>
+                <Button x:Name="StartButton" 
+                        Content="開始" 
+                        Width="60" 
+                        Height="30" 
+                        Margin="20,0,10,0"
+                        Click="StartButton_Click"/>
+                <Button x:Name="StopButton" 
+                        Content="停止" 
+                        Width="60" 
+                        Height="30"
+                        Click="StopButton_Click"/>
+            </StackPanel>
         </Grid>
-    </DockPanel>
+
+        <!-- タスクリスト -->
+        <Grid Grid.Row="2" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TabControl>
+                <!-- 進行中タスク -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="進行中"/>
+                            <TextBlock Text="{Binding ElementName=InProgressList, Path=Items.Count, StringFormat=' ({0})'}" 
+                                     Margin="2,0,0,0"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ListBox x:Name="InProgressList"
+                            Margin="5"
+                            HorizontalContentAlignment="Stretch"
+                            SelectionChanged="TaskList_SelectionChanged"
+                            MouseDoubleClick="TaskList_MouseDoubleClick"
+                            PreviewMouseDown="ListBox_PreviewMouseDown"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            ScrollViewer.CanContentScroll="True">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#DDDDDD" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4" 
+                                        Padding="10"
+                                        Background="#F8F8F8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Task Name -->
+                                        <TextBlock Grid.Column="0" 
+                                                 Text="{Binding Name}" 
+                                                 FontSize="14"
+                                                 FontWeight="Bold"
+                                                 VerticalAlignment="Center"/>
+
+                                        <!-- Time Information -->
+                                        <StackPanel Grid.Column="1" Margin="10,0">
+                                            <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
+                                                     FontFamily="Consolas"/>
+                                            <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
+                                                     FontFamily="Consolas"/>
+                                        </StackPanel>
+
+                                        <!-- Status Change Buttons -->
+                                        <StackPanel Grid.Column="2" 
+                                                  Orientation="Horizontal" 
+                                                  Margin="10,0">
+                                            <Button Content="完了" 
+                                                    Width="50" 
+                                                    Height="25"
+                                                    Margin="0,0,5,0"
+                                                    Click="CompleteTask_Click"/>
+                                            <Button Content="保留" 
+                                                    Width="50" 
+                                                    Height="25"
+                                                    Click="SetPendingTask_Click"/>
+                                        </StackPanel>
+
+                                        <!-- Delete Button -->
+                                        <Button Grid.Column="3" 
+                                                Content="削除"
+                                                Width="50"
+                                                Height="25"
+                                                Click="DeleteTask_Click"/>
+
+                                        <!-- Memo -->
+                                        <TextBlock Grid.Row="1" 
+                                                 Grid.ColumnSpan="4"
+                                                 Text="{Binding Memo}"
+                                                 Margin="0,5,0,0"
+                                                 TextWrapping="Wrap"
+                                                 Opacity="0.7"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </TabItem>
+
+                <!-- 保留中タスク -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="保留"/>
+                            <TextBlock Text="{Binding ElementName=PendingList, Path=Items.Count, StringFormat=' ({0})'}" 
+                                     Margin="2,0,0,0"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ListBox x:Name="PendingList"
+                            Margin="5"
+                            HorizontalContentAlignment="Stretch"
+                            SelectionChanged="TaskList_SelectionChanged"
+                            MouseDoubleClick="TaskList_MouseDoubleClick"
+                            PreviewMouseDown="ListBox_PreviewMouseDown"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            ScrollViewer.CanContentScroll="True">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#DDDDDD" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4" 
+                                        Padding="10"
+                                        Background="#F8F8F8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Task Name -->
+                                        <TextBlock Grid.Column="0" 
+                                                 Text="{Binding Name}" 
+                                                 FontSize="14"
+                                                 FontWeight="Bold"
+                                                 VerticalAlignment="Center"/>
+
+                                        <!-- Time Information -->
+                                        <StackPanel Grid.Column="1" Margin="10,0">
+                                            <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
+                                                     FontFamily="Consolas"/>
+                                            <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
+                                                     FontFamily="Consolas"/>
+                                        </StackPanel>
+
+                                        <!-- Status Change Buttons -->
+                                        <StackPanel Grid.Column="2" 
+                                                  Orientation="Horizontal" 
+                                                  Margin="10,0">
+                                            <Button Content="完了" 
+                                                    Width="50" 
+                                                    Height="25"
+                                                    Margin="0,0,5,0"
+                                                    Click="CompleteTask_Click"/>
+                                            <Button Content="進行" 
+                                                    Width="50" 
+                                                    Height="25"
+                                                    Click="SetInProgressTask_Click"/>
+                                        </StackPanel>
+
+                                        <!-- Delete Button -->
+                                        <Button Grid.Column="3" 
+                                                Content="削除"
+                                                Width="50"
+                                                Height="25"
+                                                Click="DeleteTask_Click"/>
+
+                                        <!-- Memo -->
+                                        <TextBlock Grid.Row="1" 
+                                                 Grid.ColumnSpan="4"
+                                                 Text="{Binding Memo}"
+                                                 Margin="0,5,0,0"
+                                                 TextWrapping="Wrap"
+                                                 Opacity="0.7"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </TabItem>
+
+                <!-- 完了タスク -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="完了"/>
+                            <TextBlock Text="{Binding ElementName=CompletedList, Path=Items.Count, StringFormat=' ({0})'}" 
+                                     Margin="2,0,0,0"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ListBox x:Name="CompletedList"
+                            Margin="5"
+                            HorizontalContentAlignment="Stretch"
+                            SelectionChanged="TaskList_SelectionChanged"
+                            MouseDoubleClick="TaskList_MouseDoubleClick"
+                            PreviewMouseDown="ListBox_PreviewMouseDown"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            ScrollViewer.CanContentScroll="True">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#DDDDDD" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4" 
+                                        Padding="10"
+                                        Background="#F8F8F8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Task Name -->
+                                        <TextBlock Grid.Column="0" 
+                                                 Text="{Binding Name}" 
+                                                 FontSize="14"
+                                                 FontWeight="Bold"
+                                                 VerticalAlignment="Center"/>
+
+                                        <!-- Time Information -->
+                                        <StackPanel Grid.Column="1" Margin="10,0">
+                                            <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
+                                                     FontFamily="Consolas"/>
+                                            <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
+                                                     FontFamily="Consolas"/>
+                                            <TextBlock Text="{Binding CompletedAt, StringFormat='完了: {0:MM/dd HH:mm}'}"
+                                                     FontFamily="Consolas"/>
+                                        </StackPanel>
+
+                                        <!-- Status Change Button -->
+                                        <Button Grid.Column="2" 
+                                                Content="進行" 
+                                                Width="50" 
+                                                Height="25"
+                                                Margin="10,0"
+                                                Click="SetInProgressTask_Click"/>
+
+                                        <!-- Delete Button -->
+                                        <Button Grid.Column="3" 
+                                                Content="削除"
+                                                Width="50"
+                                                Height="25"
+                                                Click="DeleteTask_Click"/>
+
+                                        <!-- Memo -->
+                                        <TextBlock Grid.Row="1" 
+                                                 Grid.ColumnSpan="4"
+                                                 Text="{Binding Memo}"
+                                                 Margin="0,5,0,0"
+                                                 TextWrapping="Wrap"
+                                                 Opacity="0.7"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </TabItem>
+            </TabControl>
+
+            <!-- Add Task Button -->
+            <Button Grid.Row="1"
+                    Content="新規タスク"
+                    Width="100"
+                    Height="30"
+                    Margin="0,10,0,0"
+                    Click="AddTask_Click"/>
+        </Grid>
+    </Grid>
 </Window>

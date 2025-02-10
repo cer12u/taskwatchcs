@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -33,6 +33,7 @@ namespace TaskManager
         private DateTime? lastTickTime;
         private TimeSpan baseElapsedTime;
         private DateTime lastNotificationTime;
+        private TaskItem? runningTask; // 現在実行中のタスク
 
         /// <summary>
         /// メインウィンドウのコンストラクタ
@@ -51,6 +52,11 @@ namespace TaskManager
             LoadTasks();
             CheckAndArchiveTasks();
             CheckInactiveTasks();
+
+            // リストボックスのPreviewMouseDownイベントを設定
+            InProgressList.PreviewMouseDown += ListBox_PreviewMouseDown;
+            PendingList.PreviewMouseDown += ListBox_PreviewMouseDown;
+            CompletedList.PreviewMouseDown += ListBox_PreviewMouseDown;
         }
 
         /// <summary>
@@ -301,6 +307,7 @@ namespace TaskManager
                 isRunning = true;
                 UpdateTimerControls();
 
+                runningTask = selectedTask;
                 var currentTask = selectedTask ?? otherTask;
                 logger.LogTaskStart(currentTask);
             }
@@ -328,12 +335,52 @@ namespace TaskManager
                 isRunning = false;
                 UpdateTimerControls();
 
-                var currentTask = GetSelectedTask() ?? otherTask;
                 var duration = DateTime.Now - startTime;
-                currentTask.AddElapsedTime(duration);
-                baseElapsedTime = currentTask.ElapsedTime;
-                logger.LogTaskStop(currentTask, duration);
+
+                // その他タスクの場合、新規タスク作成を提案
+                if (runningTask == null)
+                {
+                    var result = MessageBox.Show(
+                        $"「その他」で {duration:hh\\:mm} の作業時間が記録されました。\n新しいタスクを作成しますか？",
+                        "タスク作成",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        var inputWindow = new TaskInputWindow(duration)
+                        {
+                            Owner = this
+                        };
+
+                        if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
+                        {
+                            inProgressTasks.Add(inputWindow.CreatedTask);
+                            if (!inputWindow.AddOtherTime)
+                            {
+                                otherTask.AddElapsedTime(duration);
+                            }
+                            SaveTasks();
+                        }
+                        else
+                        {
+                            otherTask.AddElapsedTime(duration);
+                        }
+                    }
+                    else
+                    {
+                        otherTask.AddElapsedTime(duration);
+                    }
+                }
+                else
+                {
+                    runningTask.AddElapsedTime(duration);
+                }
+
+                baseElapsedTime = (runningTask ?? otherTask).ElapsedTime;
+                logger.LogTaskStop(runningTask ?? otherTask, duration);
                 lastTickTime = null;
+                runningTask = null;
                 SaveTasks();
 
                 // 最終時間を表示
@@ -343,17 +390,45 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// リストボックスの空白部分クリック時の処理
+        /// </summary>
+        private void ListBox_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is ListBox listBox)
+            {
+                var item = listBox.InputHitTest(e.GetPosition(listBox)) as UIElement;
+                if (item == null || item == listBox)
+                {
+                    listBox.SelectedItem = null;
+                    e.Handled = true;
+                }
+            }
+        }
+
+        /// <summary>
         /// タスク選択変更時の処理
         /// </summary>
         private void TaskList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
-            if (isRunning)
+            if (sender is ListBox listBox)
             {
-                StopTimer();
+                // 他のリストの選択を解除
+                if (listBox != InProgressList) InProgressList.SelectedItem = null;
+                if (listBox != PendingList) PendingList.SelectedItem = null;
+                if (listBox != CompletedList) CompletedList.SelectedItem = null;
             }
 
-            var currentTask = GetSelectedTask() ?? otherTask;
-            baseElapsedTime = currentTask.ElapsedTime;
+            var selectedTask = GetSelectedTask();
+            if (selectedTask != null)
+            {
+                baseElapsedTime = selectedTask.ElapsedTime;
+            }
+            else
+            {
+                // その他タスクは毎回0から開始
+                baseElapsedTime = TimeSpan.Zero;
+            }
+
             StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
             StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
 

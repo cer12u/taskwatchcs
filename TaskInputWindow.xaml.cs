@@ -15,12 +15,31 @@ namespace TaskManager
         public TaskItem? CreatedTask { get; private set; }
 
         /// <summary>
+        /// その他タスクの経過時間を加算するかどうか
+        /// </summary>
+        public bool AddOtherTime { get; private set; }
+
+        /// <summary>
+        /// その他タスクの経過時間
+        /// </summary>
+        private TimeSpan otherTaskTime;
+
+        /// <summary>
         /// TaskInputWindowのコンストラクタ
         /// </summary>
-        public TaskInputWindow()
+        /// <param name="otherTaskElapsedTime">その他タスクの経過時間（ある場合）</param>
+        public TaskInputWindow(TimeSpan? otherTaskElapsedTime = null)
         {
             InitializeComponent();
             InitializeTimeComboBoxes();
+
+            // その他タスクの時間がある場合のみチェックボックスを表示
+            if (otherTaskElapsedTime.HasValue && otherTaskElapsedTime.Value > TimeSpan.Zero)
+            {
+                otherTaskTime = otherTaskElapsedTime.Value;
+                AddOtherTimeCheckBox.Content = $"「その他」の作業時間 ({otherTaskElapsedTime.Value:hh\\:mm}) を加算する";
+                AddOtherTimeCheckBox.Visibility = Visibility.Visible;
+            }
         }
 
         /// <summary>
@@ -47,7 +66,6 @@ namespace TaskManager
 
         /// <summary>
         /// 追加ボタンクリック時の処理
-        /// 入力値を検証し、新しいタスクを作成します
         /// </summary>
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
@@ -74,13 +92,19 @@ namespace TaskManager
                 estimatedTime
             );
 
+            // その他タスクの時間を加算
+            if (AddOtherTimeCheckBox.IsChecked == true)
+            {
+                CreatedTask.AddElapsedTime(otherTaskTime);
+                AddOtherTime = true;
+            }
+
             DialogResult = true;
             Close();
         }
 
         /// <summary>
         /// キャンセルボタンクリック時の処理
-        /// タスク作成をキャンセルしてダイアログを閉じます
         /// </summary>
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
