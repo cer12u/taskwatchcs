@@ -76,7 +76,8 @@
                     <Button Grid.Column="1"
                             Content="選択解除"
                             Style="{StaticResource ModernButton}"
-                            Width="80"
+                            Width="100"
+                            Margin="0,0,10,0"
                             Click="DeselectTask_Click"/>
                 </Grid>
 
@@ -125,7 +126,7 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TabControl Style="{StaticResource MaterialDesignNavigatilRailTabControl}">
+            <TabControl>
                 <!-- 進行中タスク -->
                 <TabItem>
                     <TabItem.Header>

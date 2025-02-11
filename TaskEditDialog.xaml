@@ -10,7 +10,9 @@
         TextElement.FontSize="13"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Auto"
-        ResizeMode="NoResize"
+        ResizeMode="CanResizeWithGrip"
+        MinWidth="500"
+        MinHeight="600"
         PreviewKeyDown="Window_PreviewKeyDown"
         Loaded="Window_Loaded">
     <Window.Resources>
@@ -23,9 +25,19 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{DynamicResource MaterialDesignPaper}" 
-            Margin="20">
-        <Grid>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- メインコンテンツ -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource MaterialDesignPaper}"
+                Margin="10">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Disabled">
+                <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -151,11 +163,17 @@
                         Background="Transparent"/>
             </Border>
 
-            <!-- ボタン -->
-            <StackPanel Grid.Row="9"
-                        Orientation="Horizontal"
+                </Grid>
+            </ScrollViewer>
+        </Border>
+
+        <!-- ボタン -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource MaterialDesignPaper}"
+                Margin="10,0,10,10">
+            <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
-                        Margin="0,20,0,0">
+                        Margin="20,10">
                 <Button Content="保存"
                         Style="{StaticResource ModernButton}"
                         Width="90"
@@ -167,6 +185,6 @@
                         Style="{StaticResource ModernButton}"
                         Click="CancelButton_Click"/>
             </StackPanel>
-        </Grid>
-    </Border>
+        </Border>
+    </Grid>
 </Window>

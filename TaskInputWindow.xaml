@@ -10,7 +10,9 @@
         TextElement.FontSize="13"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Auto"
-        ResizeMode="NoResize"
+        ResizeMode="CanResizeWithGrip"
+        MinWidth="500"
+        MinHeight="550"
         Loaded="Window_Loaded">
     <Window.Resources>
         <local:PriorityConverter x:Key="PriorityConverter"/>
@@ -22,9 +24,19 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{DynamicResource MaterialDesignPaper}" 
-            Margin="20">
-        <Grid>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- メインコンテンツ -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource MaterialDesignPaper}"
+                Margin="10">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Disabled">
+                <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -123,10 +135,17 @@
                 </StackPanel>
             </Border>
 
-            <!-- ボタン -->
-            <StackPanel Grid.Row="7"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right">
+                </Grid>
+            </ScrollViewer>
+        </Border>
+
+        <!-- ボタン -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource MaterialDesignPaper}"
+                Margin="10,0,10,10">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Margin="20,10">
                 <Button Content="追加"
                         Style="{StaticResource ModernButton}"
                         Width="90"
@@ -138,6 +157,6 @@
                         Style="{StaticResource ModernButton}"
                         Click="CancelButton_Click"/>
             </StackPanel>
-        </Grid>
-    </Border>
+        </Border>
+    </Grid>
 </Window>
