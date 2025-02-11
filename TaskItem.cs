@@ -16,6 +16,16 @@ namespace TaskManager
     }
 
     /// <summary>
+    /// タスクの優先度を表す列挙型
+    /// </summary>
+    public enum TaskPriority
+    {
+        Low,    // 低
+        Medium, // 中
+        High    // 高
+    }
+
+    /// <summary>
     /// タスクの情報を管理するクラス。
     /// INotifyPropertyChangedを実装し、UIへの自動更新を提供します。
     /// </summary>
@@ -25,6 +35,8 @@ namespace TaskManager
         private string memo = string.Empty;
         private TimeSpan elapsedTime;
         private TaskStatus status;
+        private TaskPriority priority = TaskPriority.Medium;
+        private bool isProcessing;
 
         /// <summary>
         /// タスクの一意識別子
@@ -100,6 +112,32 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// タスクの優先度
+        /// </summary>
+        public TaskPriority Priority
+        {
+            get => priority;
+            set
+            {
+                priority = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// タスクが処理中かどうか
+        /// </summary>
+        public bool IsProcessing
+        {
+            get => isProcessing;
+            set
+            {
+                isProcessing = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
         /// タスクの完了日時
         /// </summary>
         public DateTime? CompletedAt { get; private set; }
@@ -155,6 +193,7 @@ namespace TaskManager
             EstimatedTime = estimatedTime;
             ElapsedTime = TimeSpan.Zero;
             Status = TaskStatus.InProgress;
+            Priority = TaskPriority.Medium;  // デフォルトの優先度を設定
             CreatedAt = DateTime.Now;
             LastWorkedAt = CreatedAt;
         }

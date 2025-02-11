@@ -72,22 +72,46 @@ namespace TaskManager
         /// スレッドセーフな実装のためlockを使用
         /// </summary>
         /// <param name="message">記録するメッセージ</param>
-        private void LogActivity(string message)
+        private void LogActivity(string message, bool isTrace = false)
         {
             try
             {
                 lock (lockObj)
                 {
-                    // タイムスタンプ付きでログを記録
-                    string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} - {message}";
+                    var prefix = isTrace ? "[TRACE]" : "[INFO]";
+                    string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {prefix} - {message}";
                     File.AppendAllText(logFile, logEntry + Environment.NewLine, Encoding.UTF8);
+                    System.Diagnostics.Debug.WriteLine(logEntry);
                 }
             }
             catch (Exception ex)
             {
-                // ログ書き込みエラーは無視（アプリケーションの動作に影響を与えない）
                 System.Diagnostics.Debug.WriteLine($"ログ書き込みエラー: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// デバッグ用のトレースログを記録
+        /// </summary>
+        public void LogTrace(string message)
+        {
+            LogActivity(message, true);
+        }
+
+        /// <summary>
+        /// タスク編集時のデータ変更をログに記録
+        /// </summary>
+        public void LogTaskEdit(TaskItem task, string fieldName, string oldValue, string newValue)
+        {
+            LogTrace($"タスク編集: {task.Name}, フィールド: {fieldName}, 変更前: {oldValue}, 変更後: {newValue}");
+        }
+
+        /// <summary>
+        /// 入力値の検証結果をログに記録
+        /// </summary>
+        public void LogValidation(string context, bool isValid, string message)
+        {
+            LogTrace($"入力検証 [{context}] - {(isValid ? "成功" : "失敗")}: {message}");
         }
     }
 }

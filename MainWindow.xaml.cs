@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -171,21 +171,25 @@ namespace TaskManager
         /// </summary>
         private void CheckInactiveTasks()
         {
-            var inactiveTasks = inProgressTasks
-                .Where(task => task.IsInactive(InactiveDuration))
-                .ToList();
-
-            foreach (var task in inactiveTasks)
+            var settings = Settings.Instance;
+            if (settings.InactiveTasksEnabled)
             {
-                inProgressTasks.Remove(task);
-                task.SetPending();
-                pendingTasks.Add(task);
-                logger.LogTaskStop(task, TimeSpan.Zero);
-            }
+                var inactiveTasks = inProgressTasks
+                    .Where(task => task.IsInactive(InactiveDuration))
+                    .ToList();
 
-            if (inactiveTasks.Any())
-            {
-                SaveTasks();
+                foreach (var task in inactiveTasks)
+                {
+                    inProgressTasks.Remove(task);
+                    task.SetPending();
+                    pendingTasks.Add(task);
+                    logger.LogTaskStop(task, TimeSpan.Zero);
+                }
+
+                if (inactiveTasks.Any())
+                {
+                    SaveTasks();
+                }
             }
         }
 
@@ -206,7 +210,10 @@ namespace TaskManager
             var settings = Settings.Instance;
             if (settings.NeedsReset())
             {
-                ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
+                if (settings.AutoArchiveEnabled)
+                {
+                    ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
+                }
                 settings.UpdateLastResetTime();
             }
         }
@@ -309,6 +316,10 @@ namespace TaskManager
 
                 runningTask = selectedTask;
                 var currentTask = selectedTask ?? otherTask;
+                if (selectedTask != null)
+                {
+                    selectedTask.IsProcessing = true;
+                }
                 logger.LogTaskStart(currentTask);
             }
         }
@@ -336,6 +347,11 @@ namespace TaskManager
                 UpdateTimerControls();
 
                 var duration = DateTime.Now - startTime;
+
+                if (runningTask != null)
+                {
+                    runningTask.IsProcessing = false;
+                }
 
                 // その他タスクの場合、同じ日付のタスクを探すか新規作成
                 if (runningTask == null)
@@ -445,28 +461,56 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// タスクダブルクリック時の処理（編集）
+        /// タスク編集メニュー選択時の処理
         /// </summary>
-        private void TaskList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void EditTask_Click(object sender, EventArgs e)
         {
-            if (sender is ListBox listBox && listBox.SelectedItem is TaskItem selectedTask)
+            TaskItem? selectedTask = null;
+
+            if (e is MouseButtonEventArgs && sender is ListBox listBox)
             {
+                selectedTask = listBox.SelectedItem as TaskItem;
+            }
+            else if (sender is FrameworkElement element)
+            {
+                selectedTask = element.DataContext as TaskItem;
+            }
+
+            if (selectedTask != null)
+            {
+                logger.LogTrace($"タスク編集開始: {selectedTask.Name}");
+                logger.LogTrace($"編集前の値: EstimatedTime={selectedTask.EstimatedTime}, ElapsedTime={selectedTask.ElapsedTime}, Priority={selectedTask.Priority}");
+
                 var dialog = new TaskEditDialog(
                     selectedTask.Name,
                     selectedTask.Memo ?? "",
                     selectedTask.EstimatedTime,
-                    selectedTask.ElapsedTime)
+                    selectedTask.ElapsedTime,
+                    selectedTask.Priority)
                 {
                     Owner = this
                 };
 
                 if (dialog.ShowDialog() == true && dialog.TaskName != null)
                 {
+                    logger.LogTrace($"タスク編集の保存: {dialog.TaskName}");
+                    logger.LogTrace($"変更後の値: EstimatedTime={dialog.EstimatedTime}, ElapsedTime={dialog.ElapsedTime}, Priority={dialog.Priority}");
+
                     selectedTask.Name = dialog.TaskName;
                     selectedTask.Memo = dialog.Memo ?? "";
                     selectedTask.EstimatedTime = dialog.EstimatedTime;
                     selectedTask.ElapsedTime = dialog.ElapsedTime;
+                    selectedTask.Priority = dialog.Priority;
                     SaveTasks();
+
+                    // リストの表示を更新
+                    InProgressList.Items.Refresh();
+                    PendingList.Items.Refresh();
+                    CompletedList.Items.Refresh();
+                }
+                else
+                {
+                    logger.LogTrace("タスク編集がキャンセルされました");
                 }
             }
         }
@@ -611,10 +655,7 @@ namespace TaskManager
                 StopTimer();
             }
 
-            var inputWindow = new TaskInputWindow
-            {
-                Owner = this
-            };
+            var inputWindow = new TaskInputWindow { Owner = this };
 
             if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
             {

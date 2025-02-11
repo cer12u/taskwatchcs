@@ -39,6 +39,16 @@ namespace TaskManager
         public bool EstimatedTimeNotificationEnabled { get; set; } = true;
 
         /// <summary>
+        /// 自動アーカイブを有効にするかどうか
+        /// </summary>
+        public bool AutoArchiveEnabled { get; set; } = true;
+
+        /// <summary>
+        /// 非アクティブタスクの自動移動を有効にするかどうか
+        /// </summary>
+        public bool InactiveTasksEnabled { get; set; } = true;
+
+        /// <summary>
         /// アーカイブされた完了済みタスクのファイルパスを生成
         /// </summary>
         /// <param name="date">対象日付</param>

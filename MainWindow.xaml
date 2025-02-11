@@ -41,30 +41,44 @@
                         Click="DeselectTask_Click"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="1" 
-                      Orientation="Horizontal" 
-                      HorizontalAlignment="Left">
-                <TextBlock x:Name="StopwatchDisplay" 
-                         Text="00:00:00" 
-                         FontSize="24" 
-                         FontFamily="Consolas"/>
-                <TextBlock x:Name="StopwatchMilliseconds" 
-                         Text=".0" 
-                         FontSize="16" 
-                         FontFamily="Consolas" 
-                         Margin="0,4,0,0"/>
-                <Button x:Name="StartButton" 
-                        Content="開始" 
-                        Width="60" 
-                        Height="30" 
-                        Margin="20,0,10,0"
-                        Click="StartButton_Click"/>
-                <Button x:Name="StopButton" 
-                        Content="停止" 
-                        Width="60" 
-                        Height="30"
-                        Click="StopButton_Click"/>
-            </StackPanel>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0"
+                          Orientation="Horizontal"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center">
+                    <TextBlock x:Name="StopwatchDisplay"
+                             Text="00:00:00"
+                             FontSize="32"
+                             FontFamily="Consolas"/>
+                    <TextBlock x:Name="StopwatchMilliseconds"
+                             Text=".0"
+                             FontSize="24"
+                             FontFamily="Consolas"
+                             Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                          Orientation="Horizontal"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center">
+                    <Button x:Name="StartButton"
+                            Content="開始"
+                            Width="70"
+                            Height="35"
+                            Margin="0,0,10,0"
+                            Click="StartButton_Click"/>
+                    <Button x:Name="StopButton"
+                            Content="停止"
+                            Width="70"
+                            Height="35"
+                            Click="StopButton_Click"/>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <!-- タスクリスト -->
@@ -88,20 +102,44 @@
                             Margin="5"
                             HorizontalContentAlignment="Stretch"
                             SelectionChanged="TaskList_SelectionChanged"
-                            MouseDoubleClick="TaskList_MouseDoubleClick"
+                            MouseDoubleClick="EditTask_Click"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
                             MouseDown="ListBox_MouseDown"
                             Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="完了" Click="CompleteTask_Click"/>
+                                <MenuItem Header="保留" Click="SetPendingTask_Click"/>
+                                <Separator/>
+                                <MenuItem Header="編集" Click="EditTask_Click"/>
+                                <MenuItem Header="削除" Click="DeleteTask_Click"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border BorderBrush="#DDDDDD"
                                        BorderThickness="1"
                                        CornerRadius="4"
-                                       Padding="5,3"
-                                       Margin="0,1"
-                                       Background="#F8F8F8">
+                                       Padding="8,5"
+                                       Margin="0,1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#F8F8F8"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Priority}" Value="High">
+                                                    <Setter Property="Background" Value="#FFF0F0"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Priority}" Value="Medium">
+                                                    <Setter Property="Background" Value="#F0F8FF"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Priority}" Value="Low">
+                                                    <Setter Property="Background" Value="#F0FFF0"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -115,18 +153,21 @@
                                         </Grid.RowDefinitions>
 
                                         <!-- Task Name -->
-                                        <TextBlock Grid.Column="0" 
-                                                 Text="{Binding Name}" 
-                                                 FontSize="14"
-                                                 FontWeight="Bold"
-                                                 VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="0"
+                                                  Text="{Binding Name}"
+                                                  FontSize="16"
+                                                  FontWeight="Bold"
+                                                  VerticalAlignment="Center"/>
 
                                         <!-- Time Information -->
                                         <StackPanel Grid.Column="1" Margin="10,0">
                                             <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
-                                                     FontFamily="Consolas"/>
+                                                      FontFamily="Consolas"
+                                                      FontSize="14"/>
                                             <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
-                                                     FontFamily="Consolas"/>
+                                                      FontFamily="Consolas"
+                                                      FontSize="14"
+                                                      FontWeight="Bold"/>
                                         </StackPanel>
 
                                         <!-- Status Change Buttons -->
@@ -188,12 +229,21 @@
                             Margin="5"
                             HorizontalContentAlignment="Stretch"
                             SelectionChanged="TaskList_SelectionChanged"
-                            MouseDoubleClick="TaskList_MouseDoubleClick"
+                            MouseDoubleClick="EditTask_Click"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
                             MouseDown="ListBox_MouseDown"
                             Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="完了" Click="CompleteTask_Click"/>
+                                <MenuItem Header="進行" Click="SetInProgressTask_Click"/>
+                                <Separator/>
+                                <MenuItem Header="編集" Click="EditTask_Click"/>
+                                <MenuItem Header="削除" Click="DeleteTask_Click"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border BorderBrush="#DDDDDD"
@@ -224,9 +274,12 @@
                                         <!-- Time Information -->
                                         <StackPanel Grid.Column="1" Margin="10,0">
                                             <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
-                                                     FontFamily="Consolas"/>
+                                                      FontFamily="Consolas"
+                                                      FontSize="14"/>
                                             <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
-                                                     FontFamily="Consolas"/>
+                                                      FontFamily="Consolas"
+                                                      FontSize="14"
+                                                      FontWeight="Bold"/>
                                         </StackPanel>
 
                                         <!-- Status Change Buttons -->
@@ -288,12 +341,21 @@
                             Margin="5"
                             HorizontalContentAlignment="Stretch"
                             SelectionChanged="TaskList_SelectionChanged"
-                            MouseDoubleClick="TaskList_MouseDoubleClick"
+                            MouseDoubleClick="EditTask_Click"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
                             MouseDown="ListBox_MouseDown"
                             Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="進行" Click="SetInProgressTask_Click"/>
+                                <MenuItem Header="保留" Click="SetPendingTask_Click"/>
+                                <Separator/>
+                                <MenuItem Header="編集" Click="EditTask_Click"/>
+                                <MenuItem Header="削除" Click="DeleteTask_Click"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border BorderBrush="#DDDDDD"
@@ -324,11 +386,15 @@
                                         <!-- Time Information -->
                                         <StackPanel Grid.Column="1" Margin="10,0">
                                             <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
-                                                     FontFamily="Consolas"/>
+                                                      FontFamily="Consolas"
+                                                      FontSize="14"/>
                                             <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
-                                                     FontFamily="Consolas"/>
+                                                      FontFamily="Consolas"
+                                                      FontSize="14"
+                                                      FontWeight="Bold"/>
                                             <TextBlock Text="{Binding CompletedAt, StringFormat='完了: {0:MM/dd HH:mm}'}"
-                                                     FontFamily="Consolas"/>
+                                                      FontFamily="Consolas"
+                                                      FontSize="14"/>
                                         </StackPanel>
 
                                         <!-- Status Change Button -->
