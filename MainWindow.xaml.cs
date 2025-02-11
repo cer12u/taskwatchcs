@@ -1,5 +1,6 @@
 ﻿﻿using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -7,13 +8,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Microsoft.Toolkit.Uwp.Notifications; // Windows 10 通知用
+using System.Windows.Media;
+using System.Windows.Media.Effects;
+using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace TaskManager
 {
     /// <summary>
-    /// タスク管理アプリケーションのメインウィンドウ。
-    /// タスクの一覧表示、時間管理、データの永続化を担当します。
+    /// MainWindow.xaml の相互作用ロジック
     /// </summary>
     public partial class MainWindow : Window
     {
@@ -21,7 +23,7 @@ namespace TaskManager
         private readonly DispatcherTimer resetCheckTimer = new();
         private readonly DispatcherTimer inactiveCheckTimer = new();
         private readonly DispatcherTimer notificationTimer = new();
-        private static readonly TimeSpan InactiveDuration = TimeSpan.FromHours(72); // 3日間
+        private static readonly TimeSpan InactiveDuration = TimeSpan.FromHours(72);
         private DateTime startTime;
         private bool isRunning = false;
         private readonly ObservableCollection<TaskItem> inProgressTasks = new();
@@ -33,11 +35,8 @@ namespace TaskManager
         private DateTime? lastTickTime;
         private TimeSpan baseElapsedTime;
         private DateTime lastNotificationTime;
-        private TaskItem? runningTask; // 現在実行中のタスク
+        private TaskItem? runningTask;
 
-        /// <summary>
-        /// メインウィンドウのコンストラクタ
-        /// </summary>
         public MainWindow()
         {
             InitializeComponent();
@@ -53,58 +52,61 @@ namespace TaskManager
             CheckAndArchiveTasks();
             CheckInactiveTasks();
 
-            // リストボックスのPreviewMouseDownイベントを設定
             InProgressList.PreviewMouseDown += ListBox_PreviewMouseDown;
             PendingList.PreviewMouseDown += ListBox_PreviewMouseDown;
             CompletedList.PreviewMouseDown += ListBox_PreviewMouseDown;
+
+            InProgressList.PreviewKeyDown += ListBox_PreviewKeyDown;
+            PendingList.PreviewKeyDown += ListBox_PreviewKeyDown;
+            CompletedList.PreviewKeyDown += ListBox_PreviewKeyDown;
         }
 
-        /// <summary>
-        /// ストップウォッチの初期化
-        /// </summary>
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void ListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                e.Handled = true;
+            }
+        }
+
         private void InitializeStopwatch()
         {
             timer.Interval = TimeSpan.FromMilliseconds(100);
             timer.Tick += Timer_Tick;
-            StopButton.IsEnabled = false;
             UpdateCurrentTaskDisplay();
             UpdateTimerControls();
         }
 
-        /// <summary>
-        /// リセット確認タイマーの初期化
-        /// </summary>
         private void InitializeResetTimer()
         {
-            resetCheckTimer.Interval = TimeSpan.FromMinutes(1); // 1分ごとにチェック
+            resetCheckTimer.Interval = TimeSpan.FromMinutes(1);
             resetCheckTimer.Tick += ResetCheckTimer_Tick;
             resetCheckTimer.Start();
         }
 
-        /// <summary>
-        /// 非アクティブタスクチェックタイマーの初期化
-        /// </summary>
         private void InitializeInactiveCheckTimer()
         {
-            inactiveCheckTimer.Interval = TimeSpan.FromHours(1); // 1時間ごとにチェック
+            inactiveCheckTimer.Interval = TimeSpan.FromHours(1);
             inactiveCheckTimer.Tick += InactiveCheckTimer_Tick;
             inactiveCheckTimer.Start();
         }
 
-        /// <summary>
-        /// 通知タイマーの初期化
-        /// </summary>
         private void InitializeNotificationTimer()
         {
-            notificationTimer.Interval = TimeSpan.FromMinutes(1); // 1分ごとにチェック
+            notificationTimer.Interval = TimeSpan.FromMinutes(1);
             notificationTimer.Tick += NotificationTimer_Tick;
             notificationTimer.Start();
             lastNotificationTime = DateTime.Now;
         }
 
-        /// <summary>
-        /// 通知タイマーのTick処理
-        /// </summary>
         private void NotificationTimer_Tick(object? sender, EventArgs e)
         {
             var settings = Settings.Instance;
@@ -118,7 +120,6 @@ namespace TaskManager
             var now = DateTime.Now;
             var elapsedSinceLastNotification = now - lastNotificationTime;
 
-            // 定期通知のチェック
             if (elapsedSinceLastNotification.TotalMinutes >= settings.NotificationInterval)
             {
                 ShowNotification(
@@ -129,7 +130,6 @@ namespace TaskManager
                 lastNotificationTime = now;
             }
 
-            // 予定時間超過のチェック
             if (settings.EstimatedTimeNotificationEnabled &&
                 currentTask.ElapsedTime > currentTask.EstimatedTime &&
                 currentTask.ElapsedTime.TotalMinutes % settings.NotificationInterval == 0)
@@ -142,9 +142,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// 通知を表示
-        /// </summary>
         private void ShowNotification(string title, string message, string tag)
         {
             new ToastContentBuilder()
@@ -158,17 +155,11 @@ namespace TaskManager
                 });
         }
 
-        /// <summary>
-        /// 非アクティブタスクのチェックとステータス変更
-        /// </summary>
         private void InactiveCheckTimer_Tick(object? sender, EventArgs e)
         {
             CheckInactiveTasks();
         }
 
-        /// <summary>
-        /// 非アクティブタスクを保留状態に移動
-        /// </summary>
         private void CheckInactiveTasks()
         {
             var settings = Settings.Instance;
@@ -193,18 +184,12 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// リセット時刻の確認とタスクのアーカイブ処理
-        /// </summary>
         private void ResetCheckTimer_Tick(object? sender, EventArgs e)
         {
             CheckAndArchiveTasks();
             CheckInactiveTasks();
         }
 
-        /// <summary>
-        /// タスクのアーカイブ処理を実行
-        /// </summary>
         private void CheckAndArchiveTasks()
         {
             var settings = Settings.Instance;
@@ -218,9 +203,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// 完了済みタスクをアーカイブ
-        /// </summary>
         private void ArchiveCompletedTasks(DateTime date)
         {
             try
@@ -252,9 +234,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// タスクコレクションの初期化
-        /// </summary>
         private void InitializeTasks()
         {
             InProgressList.ItemsSource = inProgressTasks;
@@ -262,52 +241,48 @@ namespace TaskManager
             CompletedList.ItemsSource = completedTasks;
         }
 
-        /// <summary>
-        /// タイマーのTick毎の処理
-        /// 経過時間の表示を更新します
-        /// </summary>
         private void Timer_Tick(object? sender, EventArgs e)
         {
             var now = DateTime.Now;
             TimeSpan currentElapsed = now - startTime;
             TimeSpan totalElapsed = baseElapsedTime + currentElapsed;
             
-            // 表示を更新
             StopwatchDisplay.Text = totalElapsed.ToString(@"hh\:mm\:ss");
             StopwatchMilliseconds.Text = $".{(totalElapsed.Milliseconds / 100)}";
             
             lastTickTime = now;
         }
 
-        /// <summary>
-        /// タイマーコントロールの状態を更新
-        /// </summary>
         private void UpdateTimerControls()
         {
             var selectedTask = GetSelectedTask();
             bool canStart = selectedTask == null || selectedTask.Status == TaskStatus.InProgress;
             
-            StartButton.IsEnabled = !isRunning && canStart;
-            StopButton.IsEnabled = isRunning;
+            StartStopButton.Content = isRunning ? "停止" : "開始";
+            StartStopButton.Style = isRunning ? 
+                FindResource("DangerButton") as Style : 
+                FindResource("SuccessButton") as Style;
+            StartStopButton.IsEnabled = !isRunning || canStart;
         }
 
-        /// <summary>
-        /// 開始ボタンクリック時の処理
-        /// </summary>
-        private void StartButton_Click(object sender, RoutedEventArgs e)
+        private void StartStopButton_Click(object sender, RoutedEventArgs e)
         {
-            var selectedTask = GetSelectedTask();
-            if (selectedTask != null && selectedTask.Status != TaskStatus.InProgress)
+            if (isRunning)
             {
-                MessageBox.Show("進行中のタスクのみ時間を記録できます。", 
-                              "警告", 
-                              MessageBoxButton.OK, 
-                              MessageBoxImage.Warning);
-                return;
+                StopTimer();
             }
-
-            if (!isRunning)
+            else
             {
+                var selectedTask = GetSelectedTask();
+                if (selectedTask != null && selectedTask.Status != TaskStatus.InProgress)
+                {
+                    MessageBox.Show("進行中のタスクのみ時間を記録できます。", 
+                                  "警告", 
+                                  MessageBoxButton.OK, 
+                                  MessageBoxImage.Warning);
+                    return;
+                }
+
                 startTime = DateTime.Now;
                 lastTickTime = startTime;
                 timer.Start();
@@ -324,20 +299,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// 停止ボタンクリック時の処理
-        /// </summary>
-        private void StopButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (isRunning)
-            {
-                StopTimer();
-            }
-        }
-
-        /// <summary>
-        /// タイマーを停止し、経過時間を記録
-        /// </summary>
         private void StopTimer()
         {
             if (isRunning)
@@ -353,7 +314,6 @@ namespace TaskManager
                     runningTask.IsProcessing = false;
                 }
 
-                // その他タスクの場合、同じ日付のタスクを探すか新規作成
                 if (runningTask == null)
                 {
                     var today = DateTime.Now;
@@ -383,15 +343,11 @@ namespace TaskManager
                 runningTask = null;
                 SaveTasks();
 
-                // 最終時間を表示
                 StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
                 StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
             }
         }
 
-        /// <summary>
-        /// リストボックスの空白部分クリック時の処理
-        /// </summary>
         private void ListBox_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is ListBox listBox)
@@ -417,26 +373,20 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// タスク選択変更時の処理
-        /// </summary>
         private void TaskList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (sender is ListBox listBox)
             {
-                // 他のリストの選択を解除
                 if (listBox != InProgressList) InProgressList.SelectedItem = null;
                 if (listBox != PendingList) PendingList.SelectedItem = null;
                 if (listBox != CompletedList) CompletedList.SelectedItem = null;
 
-                // リストの空白部分をクリックした場合は選択を解除
                 if (e.AddedItems.Count == 0)
                 {
                     listBox.SelectedItem = null;
                 }
             }
 
-            // タイマー実行中の場合は停止
             if (isRunning)
             {
                 StopTimer();
@@ -449,7 +399,6 @@ namespace TaskManager
             }
             else
             {
-                // その他タスクは毎回0から開始
                 baseElapsedTime = TimeSpan.Zero;
             }
 
@@ -460,9 +409,6 @@ namespace TaskManager
             UpdateTimerControls();
         }
 
-        /// <summary>
-        /// タスク編集メニュー選択時の処理
-        /// </summary>
         private void EditTask_Click(object sender, EventArgs e)
         {
             TaskItem? selectedTask = null;
@@ -503,7 +449,6 @@ namespace TaskManager
                     selectedTask.Priority = dialog.Priority;
                     SaveTasks();
 
-                    // リストの表示を更新
                     InProgressList.Items.Refresh();
                     PendingList.Items.Refresh();
                     CompletedList.Items.Refresh();
@@ -515,9 +460,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// 現在選択中のタスクを取得
-        /// </summary>
         private TaskItem? GetSelectedTask()
         {
             return InProgressList.SelectedItem as TaskItem ??
@@ -525,9 +467,6 @@ namespace TaskManager
                    CompletedList.SelectedItem as TaskItem;
         }
 
-        /// <summary>
-        /// 現在選択中のタスク名を表示更新
-        /// </summary>
         private void UpdateCurrentTaskDisplay()
         {
             var currentTask = GetSelectedTask();
@@ -536,9 +475,6 @@ namespace TaskManager
                 : "選択タスク: その他";
         }
 
-        /// <summary>
-        /// タスク削除ボタンクリック時の処理
-        /// </summary>
         private void DeleteTask_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
@@ -559,9 +495,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// タスク完了ボタンクリック時の処理
-        /// </summary>
         private void CompleteTask_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
@@ -589,9 +522,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// タスクを保留状態に変更
-        /// </summary>
         private void SetPendingTask_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
@@ -610,9 +540,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// タスクを進行中状態に変更
-        /// </summary>
         private void SetInProgressTask_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
@@ -634,9 +561,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// タスク選択を解除
-        /// </summary>
         private void DeselectTask_Click(object sender, RoutedEventArgs e)
         {
             InProgressList.SelectedItem = null;
@@ -644,12 +568,8 @@ namespace TaskManager
             CompletedList.SelectedItem = null;
         }
 
-        /// <summary>
-        /// タスク追加ボタンクリック時の処理
-        /// </summary>
         private void AddTask_Click(object sender, RoutedEventArgs e)
         {
-            // タイマー実行中の場合は停止
             if (isRunning)
             {
                 StopTimer();
@@ -664,9 +584,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// 設定ダイアログを開く
-        /// </summary>
         private void OpenSettings_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new SettingsDialog
@@ -676,23 +593,16 @@ namespace TaskManager
 
             if (dialog.ShowDialog() == true)
             {
-                // 設定が変更された場合、次回のリセット時刻を更新
                 CheckAndArchiveTasks();
             }
         }
 
-        /// <summary>
-        /// 最前面表示切り替え時の処理
-        /// </summary>
         private void TopMostMenuItem_Click(object sender, RoutedEventArgs e)
         {
             Topmost = TopMostMenuItem.IsChecked;
         }
 
-        /// <summary>
-        /// アプリケーション終了時の処理
-        /// </summary>
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void Window_Closing(object sender, CancelEventArgs e)
         {
             if (isRunning)
             {
@@ -704,27 +614,18 @@ namespace TaskManager
             CheckAndArchiveTasks();
         }
 
-        /// <summary>
-        /// タスク保存メニュー選択時の処理
-        /// </summary>
         private void SaveTasks_Click(object sender, RoutedEventArgs e)
         {
             SaveTasks();
             MessageBox.Show("タスクを保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        /// <summary>
-        /// タスク読み込みメニュー選択時の処理
-        /// </summary>
         private void LoadTasks_Click(object sender, RoutedEventArgs e)
         {
             LoadTasks();
             MessageBox.Show("タスクを読み込みました。", "読み込み完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        /// <summary>
-        /// タスクを保存
-        /// </summary>
         private void SaveTasks()
         {
             try
@@ -748,9 +649,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// タスクを読み込み
-        /// </summary>
         private void LoadTasks()
         {
             try
@@ -788,9 +686,6 @@ namespace TaskManager
             }
         }
 
-        /// <summary>
-        /// JSON保存用のデータ構造
-        /// </summary>
         private class TaskData
         {
             public TaskItem[]? InProgress { get; set; }
