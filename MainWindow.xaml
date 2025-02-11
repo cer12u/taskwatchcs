@@ -83,6 +83,7 @@
                             SelectionChanged="TaskList_SelectionChanged"
                             MouseDoubleClick="TaskList_MouseDoubleClick"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
+                            MouseDown="ListBox_MouseDown"
                             Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">
@@ -172,6 +173,7 @@
                             SelectionChanged="TaskList_SelectionChanged"
                             MouseDoubleClick="TaskList_MouseDoubleClick"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
+                            MouseDown="ListBox_MouseDown"
                             Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">
@@ -261,6 +263,7 @@
                             SelectionChanged="TaskList_SelectionChanged"
                             MouseDoubleClick="TaskList_MouseDoubleClick"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
+                            MouseDown="ListBox_MouseDown"
                             Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">

@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Windows;
 
 namespace TaskManager
@@ -29,6 +30,8 @@ namespace TaskManager
         /// </summary>
         public TimeSpan ElapsedTime { get; private set; }
 
+        private static readonly Regex TimeFormatRegex = new(@"^([0-9]{1,2}):([0-5][0-9]):([0-5][0-9])$");
+
         /// <summary>
         /// TaskEditDialogのコンストラクタ
         /// </summary>
@@ -45,8 +48,7 @@ namespace TaskManager
             EstimatedMinutesComboBox.SelectedItem = estimatedTime.Minutes;
 
             // 経過時間の設定
-            ElapsedHoursTextBox.Text = ((int)elapsedTime.TotalHours).ToString();
-            ElapsedMinutesTextBox.Text = elapsedTime.Minutes.ToString();
+            ElapsedTimeTextBox.Text = elapsedTime.ToString(@"hh\:mm\:ss");
         }
 
         /// <summary>
@@ -70,33 +72,36 @@ namespace TaskManager
         /// <summary>
         /// 経過時間の入力値を検証
         /// </summary>
-        private bool ValidateElapsedTime(out int hours, out int minutes)
+        private bool ValidateElapsedTime(out TimeSpan elapsedTime)
         {
-            hours = 0;
-            minutes = 0;
+            elapsedTime = TimeSpan.Zero;
 
-            // 時間の検証
-            if (!int.TryParse(ElapsedHoursTextBox.Text, out hours) || hours < 0)
+            var match = TimeFormatRegex.Match(ElapsedTimeTextBox.Text);
+            if (!match.Success)
             {
-                MessageBox.Show("経過時間（時間）は0以上の整数を入力してください。", 
+                MessageBox.Show("経過時間は HH:mm:ss 形式で入力してください。\n例: 01:30:45", 
                               "エラー", 
                               MessageBoxButton.OK, 
                               MessageBoxImage.Warning);
-                ElapsedHoursTextBox.Focus();
+                ElapsedTimeTextBox.Focus();
                 return false;
             }
 
-            // 分の検証
-            if (!int.TryParse(ElapsedMinutesTextBox.Text, out minutes) || minutes < 0 || minutes > 59)
+            int hours = int.Parse(match.Groups[1].Value);
+            int minutes = int.Parse(match.Groups[2].Value);
+            int seconds = int.Parse(match.Groups[3].Value);
+
+            if (hours > 23)
             {
-                MessageBox.Show("経過時間（分）は0-59の整数を入力してください。", 
+                MessageBox.Show("時間は0-23の範囲で入力してください。", 
                               "エラー", 
                               MessageBoxButton.OK, 
                               MessageBoxImage.Warning);
-                ElapsedMinutesTextBox.Focus();
+                ElapsedTimeTextBox.Focus();
                 return false;
             }
 
+            elapsedTime = new TimeSpan(hours, minutes, seconds);
             return true;
         }
 
@@ -118,7 +123,7 @@ namespace TaskManager
                 return;
             }
 
-            if (!ValidateElapsedTime(out int elapsedHours, out int elapsedMinutes))
+            if (!ValidateElapsedTime(out TimeSpan elapsedTime))
             {
                 return;
             }
@@ -129,7 +134,7 @@ namespace TaskManager
             int estimatedHours = (int)EstimatedHoursComboBox.SelectedItem;
             int estimatedMinutes = (int)EstimatedMinutesComboBox.SelectedItem;
             EstimatedTime = new TimeSpan(estimatedHours, estimatedMinutes, 0);
-            ElapsedTime = new TimeSpan(elapsedHours, elapsedMinutes, 0);
+            ElapsedTime = elapsedTime;
 
             DialogResult = true;
             Close();

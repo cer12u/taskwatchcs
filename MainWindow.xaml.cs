@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -337,13 +337,24 @@ namespace TaskManager
 
                 var duration = DateTime.Now - startTime;
 
-                // その他タスクの場合、自動的にタスクを作成
+                // その他タスクの場合、同じ日付のタスクを探すか新規作成
                 if (runningTask == null)
                 {
-                    var taskName = $"その他 ({DateTime.Now:MM/dd})";
-                    var newTask = new TaskItem(taskName, $"{DateTime.Now:HH:mm} - {duration:hh\\:mm} の作業", TimeSpan.FromHours(24));
-                    newTask.AddElapsedTime(duration);
-                    inProgressTasks.Add(newTask);
+                    var today = DateTime.Now;
+                    var taskName = $"その他 ({today:MM/dd})";
+                    var existingTask = inProgressTasks.FirstOrDefault(t => t.Name == taskName);
+
+                    if (existingTask != null)
+                    {
+                        existingTask.Memo += $"\n{today:HH:mm} - {duration:hh\\:mm} の作業";
+                        existingTask.AddElapsedTime(duration);
+                    }
+                    else
+                    {
+                        var newTask = new TaskItem(taskName, $"{today:HH:mm} - {duration:hh\\:mm} の作業", TimeSpan.FromHours(24));
+                        newTask.AddElapsedTime(duration);
+                        inProgressTasks.Add(newTask);
+                    }
                 }
                 else
                 {
@@ -365,14 +376,26 @@ namespace TaskManager
         /// <summary>
         /// リストボックスの空白部分クリック時の処理
         /// </summary>
+        private void ListBox_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is ListBox listBox)
+            {
+                var item = listBox.InputHitTest(e.GetPosition(listBox));
+                if (item == listBox)
+                {
+                    listBox.SelectedItem = null;
+                    e.Handled = true;
+                }
+            }
+        }
+
         private void ListBox_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is ListBox listBox)
             {
-                var item = listBox.InputHitTest(e.GetPosition(listBox)) as UIElement;
-                if (item == null || item == listBox)
+                var item = listBox.InputHitTest(e.GetPosition(listBox));
+                if (item == listBox)
                 {
-                    listBox.SelectedItem = null;
                     e.Handled = true;
                 }
             }
