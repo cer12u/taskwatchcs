@@ -45,8 +45,8 @@ namespace TaskManager
             EstimatedMinutesComboBox.SelectedItem = estimatedTime.Minutes;
 
             // 経過時間の設定
-            ElapsedHoursComboBox.SelectedItem = (int)elapsedTime.TotalHours;
-            ElapsedMinutesComboBox.SelectedItem = elapsedTime.Minutes;
+            ElapsedHoursTextBox.Text = ((int)elapsedTime.TotalHours).ToString();
+            ElapsedMinutesTextBox.Text = elapsedTime.Minutes.ToString();
         }
 
         /// <summary>
@@ -58,15 +58,46 @@ namespace TaskManager
             for (int i = 0; i <= 23; i++)
             {
                 EstimatedHoursComboBox.Items.Add(i);
-                ElapsedHoursComboBox.Items.Add(i);
             }
 
             // 分の選択肢を設定（0-55分、5分刻み）
             for (int i = 0; i <= 55; i += 5)
             {
                 EstimatedMinutesComboBox.Items.Add(i);
-                ElapsedMinutesComboBox.Items.Add(i);
             }
+        }
+
+        /// <summary>
+        /// 経過時間の入力値を検証
+        /// </summary>
+        private bool ValidateElapsedTime(out int hours, out int minutes)
+        {
+            hours = 0;
+            minutes = 0;
+
+            // 時間の検証
+            if (!int.TryParse(ElapsedHoursTextBox.Text, out hours) || hours < 0)
+            {
+                MessageBox.Show("経過時間（時間）は0以上の整数を入力してください。", 
+                              "エラー", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Warning);
+                ElapsedHoursTextBox.Focus();
+                return false;
+            }
+
+            // 分の検証
+            if (!int.TryParse(ElapsedMinutesTextBox.Text, out minutes) || minutes < 0 || minutes > 59)
+            {
+                MessageBox.Show("経過時間（分）は0-59の整数を入力してください。", 
+                              "エラー", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Warning);
+                ElapsedMinutesTextBox.Focus();
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -81,10 +112,14 @@ namespace TaskManager
                 return;
             }
 
-            if (EstimatedHoursComboBox.SelectedItem == null || EstimatedMinutesComboBox.SelectedItem == null ||
-                ElapsedHoursComboBox.SelectedItem == null || ElapsedMinutesComboBox.SelectedItem == null)
+            if (EstimatedHoursComboBox.SelectedItem == null || EstimatedMinutesComboBox.SelectedItem == null)
             {
-                MessageBox.Show("時間を選択してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("予定時間を選択してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!ValidateElapsedTime(out int elapsedHours, out int elapsedMinutes))
+            {
                 return;
             }
 
@@ -94,9 +129,6 @@ namespace TaskManager
             int estimatedHours = (int)EstimatedHoursComboBox.SelectedItem;
             int estimatedMinutes = (int)EstimatedMinutesComboBox.SelectedItem;
             EstimatedTime = new TimeSpan(estimatedHours, estimatedMinutes, 0);
-
-            int elapsedHours = (int)ElapsedHoursComboBox.SelectedItem;
-            int elapsedMinutes = (int)ElapsedMinutesComboBox.SelectedItem;
             ElapsedTime = new TimeSpan(elapsedHours, elapsedMinutes, 0);
 
             DialogResult = true;

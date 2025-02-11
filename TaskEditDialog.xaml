@@ -81,20 +81,22 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <ComboBox x:Name="ElapsedHoursComboBox"
-                     Grid.Column="0"
-                     Width="60"
-                     Margin="0,0,5,0"/>
+            <TextBox x:Name="ElapsedHoursTextBox"
+                    Grid.Column="0"
+                    Width="60"
+                    Margin="0,0,5,0"
+                    TextAlignment="Right"/>
             
             <TextBlock Text="時間"
                      Grid.Column="1"
                      Margin="0,0,10,0"
                      VerticalAlignment="Center"/>
 
-            <ComboBox x:Name="ElapsedMinutesComboBox"
-                     Grid.Column="2"
-                     Width="60"
-                     Margin="0,0,5,0"/>
+            <TextBox x:Name="ElapsedMinutesTextBox"
+                    Grid.Column="2"
+                    Width="60"
+                    Margin="0,0,5,0"
+                    TextAlignment="Right"/>
             
             <TextBlock Text="分"
                      Grid.Column="3"

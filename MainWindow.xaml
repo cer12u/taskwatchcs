@@ -83,6 +83,7 @@
                             SelectionChanged="TaskList_SelectionChanged"
                             MouseDoubleClick="TaskList_MouseDoubleClick"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
+                            Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">
                         <ListBox.ItemTemplate>
@@ -171,6 +172,7 @@
                             SelectionChanged="TaskList_SelectionChanged"
                             MouseDoubleClick="TaskList_MouseDoubleClick"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
+                            Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">
                         <ListBox.ItemTemplate>
@@ -259,6 +261,7 @@
                             SelectionChanged="TaskList_SelectionChanged"
                             MouseDoubleClick="TaskList_MouseDoubleClick"
                             PreviewMouseDown="ListBox_PreviewMouseDown"
+                            Background="Transparent"
                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                             ScrollViewer.CanContentScroll="True">
                         <ListBox.ItemTemplate>

@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -337,40 +337,13 @@ namespace TaskManager
 
                 var duration = DateTime.Now - startTime;
 
-                // その他タスクの場合、新規タスク作成を提案
+                // その他タスクの場合、自動的にタスクを作成
                 if (runningTask == null)
                 {
-                    var result = MessageBox.Show(
-                        $"「その他」で {duration:hh\\:mm} の作業時間が記録されました。\n新しいタスクを作成しますか？",
-                        "タスク作成",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question);
-
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        var inputWindow = new TaskInputWindow(duration)
-                        {
-                            Owner = this
-                        };
-
-                        if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
-                        {
-                            inProgressTasks.Add(inputWindow.CreatedTask);
-                            if (!inputWindow.AddOtherTime)
-                            {
-                                otherTask.AddElapsedTime(duration);
-                            }
-                            SaveTasks();
-                        }
-                        else
-                        {
-                            otherTask.AddElapsedTime(duration);
-                        }
-                    }
-                    else
-                    {
-                        otherTask.AddElapsedTime(duration);
-                    }
+                    var taskName = $"その他 ({DateTime.Now:MM/dd})";
+                    var newTask = new TaskItem(taskName, $"{DateTime.Now:HH:mm} - {duration:hh\\:mm} の作業", TimeSpan.FromHours(24));
+                    newTask.AddElapsedTime(duration);
+                    inProgressTasks.Add(newTask);
                 }
                 else
                 {
