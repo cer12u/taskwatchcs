@@ -17,18 +17,23 @@
         <Style x:Key="ModernButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Height" Value="35"/>
+            <Setter Property="Background" Value="#90CAF9"/>
+            <Setter Property="BorderBrush" Value="#64B5F6"/>
+            <Setter Property="Foreground" Value="#000000"/>
         </Style>
 
         <!-- 危険操作ボタンスタイル -->
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="#E74C3C"/>
-            <Setter Property="BorderBrush" Value="#C0392B"/>
+            <Setter Property="Background" Value="#FFCDD2"/>
+            <Setter Property="BorderBrush" Value="#EF9A9A"/>
+            <Setter Property="Foreground" Value="#D32F2F"/>
         </Style>
 
         <!-- 成功操作ボタンスタイル -->
         <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="#2ECC71"/>
-            <Setter Property="BorderBrush" Value="#27AE60"/>
+            <Setter Property="Background" Value="#C8E6C9"/>
+            <Setter Property="BorderBrush" Value="#A5D6A7"/>
+            <Setter Property="Foreground" Value="#2E7D32"/>
         </Style>
     </Window.Resources>
     
