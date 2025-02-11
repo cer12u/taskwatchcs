@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -591,10 +591,26 @@ namespace TaskManager
         }
 
         /// <summary>
+        /// タスク選択を解除
+        /// </summary>
+        private void DeselectTask_Click(object sender, RoutedEventArgs e)
+        {
+            InProgressList.SelectedItem = null;
+            PendingList.SelectedItem = null;
+            CompletedList.SelectedItem = null;
+        }
+
+        /// <summary>
         /// タスク追加ボタンクリック時の処理
         /// </summary>
         private void AddTask_Click(object sender, RoutedEventArgs e)
         {
+            // タイマー実行中の場合は停止
+            if (isRunning)
+            {
+                StopTimer();
+            }
+
             var inputWindow = new TaskInputWindow
             {
                 Owner = this

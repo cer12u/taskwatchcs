@@ -2,7 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="タスク管理" Height="600" Width="480"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Closing="Window_Closing">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -29,10 +30,16 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TextBlock x:Name="CurrentTaskName" 
-                     Text="選択タスク: その他" 
-                     FontSize="16" 
-                     Margin="0,0,0,5"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                <TextBlock x:Name="CurrentTaskName"
+                         Text="選択タスク: その他"
+                         FontSize="16"/>
+                <Button Content="選択解除"
+                        Width="70"
+                        Height="25"
+                        Margin="10,0,0,0"
+                        Click="DeselectTask_Click"/>
+            </StackPanel>
 
             <StackPanel Grid.Row="1" 
                       Orientation="Horizontal" 
@@ -144,13 +151,23 @@
                                                 Height="25"
                                                 Click="DeleteTask_Click"/>
 
-                                        <!-- Memo -->
-                                        <TextBlock Grid.Row="1" 
-                                                 Grid.ColumnSpan="4"
-                                                 Text="{Binding Memo}"
-                                                 Margin="0,5,0,0"
-                                                 TextWrapping="Wrap"
-                                                 Opacity="0.7"/>
+                                        <!-- Memo (Only visible for selected task) -->
+                                        <TextBlock Grid.Row="1"
+                                                  Grid.ColumnSpan="4"
+                                                  Text="{Binding Memo}"
+                                                  Margin="0,5,0,0"
+                                                  TextWrapping="Wrap"
+                                                  Opacity="0.7">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="False">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -234,13 +251,23 @@
                                                 Height="25"
                                                 Click="DeleteTask_Click"/>
 
-                                        <!-- Memo -->
-                                        <TextBlock Grid.Row="1" 
-                                                 Grid.ColumnSpan="4"
-                                                 Text="{Binding Memo}"
-                                                 Margin="0,5,0,0"
-                                                 TextWrapping="Wrap"
-                                                 Opacity="0.7"/>
+                                        <!-- Memo (Only visible for selected task) -->
+                                        <TextBlock Grid.Row="1"
+                                                  Grid.ColumnSpan="4"
+                                                  Text="{Binding Memo}"
+                                                  Margin="0,5,0,0"
+                                                  TextWrapping="Wrap"
+                                                  Opacity="0.7">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="False">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -319,13 +346,23 @@
                                                 Height="25"
                                                 Click="DeleteTask_Click"/>
 
-                                        <!-- Memo -->
-                                        <TextBlock Grid.Row="1" 
-                                                 Grid.ColumnSpan="4"
-                                                 Text="{Binding Memo}"
-                                                 Margin="0,5,0,0"
-                                                 TextWrapping="Wrap"
-                                                 Opacity="0.7"/>
+                                        <!-- Memo (Only visible for selected task) -->
+                                        <TextBlock Grid.Row="1"
+                                                  Grid.ColumnSpan="4"
+                                                  Text="{Binding Memo}"
+                                                  Margin="0,5,0,0"
+                                                  TextWrapping="Wrap"
+                                                  Opacity="0.7">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="False">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
