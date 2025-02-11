@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace TaskManager
 {
@@ -97,6 +99,34 @@ namespace TaskManager
             // UIを強制的に更新
             HoursComboBox.UpdateLayout();
             MinutesComboBox.UpdateLayout();
+
+            // タイトル入力欄にフォーカスを設定
+            TitleTextBox.Focus();
+        }
+
+        /// <summary>
+        /// キーボードイベント処理
+        /// </summary>
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && e.KeyboardDevice.Modifiers == ModifierKeys.None)
+            {
+                if (TitleTextBox.IsFocused)
+                {
+                    AddButton_Click(sender, e);
+                    e.Handled = true;
+                }
+            }
+            else if (e.Key == Key.Escape)
+            {
+                if (!TitleTextBox.Text.Any() && !MemoTextBox.Text.Any() && 
+                    HoursComboBox.SelectedItem as int? == 0 && MinutesComboBox.SelectedItem as int? == 30 &&
+                    PriorityComboBox.SelectedIndex == 1)
+                {
+                    CancelButton_Click(sender, e);
+                    e.Handled = true;
+                }
+            }
         }
 
         /// <summary>

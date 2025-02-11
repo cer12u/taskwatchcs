@@ -13,7 +13,8 @@
         ResizeMode="CanResizeWithGrip"
         MinWidth="500"
         MinHeight="550"
-        Loaded="Window_Loaded">
+        Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
         <local:PriorityConverter x:Key="PriorityConverter"/>
         
@@ -23,6 +24,15 @@
             <Setter Property="Height" Value="35"/>
             <Setter Property="Background" Value="#90CAF9"/>
             <Setter Property="BorderBrush" Value="#64B5F6"/>
+            <Setter Property="Foreground" Value="#000000"/>
+        </Style>
+
+        <!-- キャンセルボタンスタイル -->
+        <Style x:Key="CancelButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Height" Value="35"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#BDBDBD"/>
             <Setter Property="Foreground" Value="#000000"/>
         </Style>
     </Window.Resources>
@@ -156,8 +166,7 @@
                         Click="AddButton_Click"/>
                 <Button Content="キャンセル"
                         Width="90"
-                        Background="{DynamicResource MaterialDesignBodyLight}"
-                        Style="{StaticResource ModernButton}"
+                        Style="{StaticResource CancelButton}"
                         Click="CancelButton_Click"/>
             </StackPanel>
         </Border>

@@ -45,8 +45,8 @@
         </Grid.RowDefinitions>
 
         <!-- メニューバー -->
-        <Menu Grid.Row="0" Background="{DynamicResource MaterialDesignPaper}">
-            <MenuItem Header="ファイル">
+        <Menu Grid.Row="0" Background="{DynamicResource MaterialDesignPaper}" Height="30">
+            <MenuItem Header="ファイル" Padding="10,0" VerticalContentAlignment="Center">
                 <MenuItem Header="保存" Click="SaveTasks_Click"/>
                 <MenuItem Header="読み込み" Click="LoadTasks_Click"/>
                 <Separator/>
