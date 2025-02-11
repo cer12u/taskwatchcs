@@ -81,7 +81,9 @@
                     <Button Grid.Column="1"
                             Content="選択解除"
                             Style="{StaticResource ModernButton}"
-                            Width="100"
+                            Width="72"
+                            Height="32"
+                            FontSize="10"
                             Margin="0,0,10,0"
                             Click="DeselectTask_Click"/>
                 </Grid>
@@ -220,7 +222,7 @@
                                             <Button Content="完了"
                                                     Style="{StaticResource SuccessButton}"
                                                     Width="40"
-                                                    Height="28"
+                                                    Height="32"
                                                     Padding="1"
                                                     FontSize="11"
                                                     Margin="0,0,3,0"
@@ -228,7 +230,7 @@
                                             <Button Content="保留"
                                                     Style="{StaticResource ModernButton}"
                                                     Width="40"
-                                                    Height="28"
+                                                    Height="32"
                                                     Padding="1"
                                                     FontSize="11"
                                                     Click="SetPendingTask_Click"/>
@@ -239,7 +241,7 @@
                                                 Content="削除"
                                                 Style="{StaticResource DangerButton}"
                                                 Width="40"
-                                                Height="28"
+                                                Height="32"
                                                 Padding="1"
                                                 FontSize="11"
                                                 Click="DeleteTask_Click"/>
@@ -301,6 +303,21 @@
                                        Padding="12,8"
                                        Margin="0,3"
                                        Background="{DynamicResource MaterialDesignPaper}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Priority}" Value="High">
+                                                    <Setter Property="Background" Value="#FFF3F3"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Priority}" Value="Medium">
+                                                    <Setter Property="Background" Value="#F3F9FF"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Priority}" Value="Low">
+                                                    <Setter Property="Background" Value="#F3FFF3"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -337,7 +354,7 @@
                                                 Content="復帰"
                                                 Style="{StaticResource ModernButton}"
                                                 Width="40"
-                                                Height="28"
+                                                Height="32"
                                                 Padding="1"
                                                 FontSize="11"
                                                 Margin="5,0"
@@ -348,7 +365,7 @@
                                                 Content="削除"
                                                 Style="{StaticResource DangerButton}"
                                                 Width="40"
-                                                Height="28"
+                                                Height="32"
                                                 Padding="1"
                                                 FontSize="11"
                                                 Click="DeleteTask_Click"/>
@@ -412,6 +429,21 @@
                                        Padding="12,8"
                                        Margin="0,3"
                                        Background="{DynamicResource MaterialDesignPaper}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Priority}" Value="High">
+                                                    <Setter Property="Background" Value="#FFF3F3"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Priority}" Value="Medium">
+                                                    <Setter Property="Background" Value="#F3F9FF"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Priority}" Value="Low">
+                                                    <Setter Property="Background" Value="#F3FFF3"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -452,7 +484,7 @@
                                                 Content="復帰"
                                                 Style="{StaticResource ModernButton}"
                                                 Width="40"
-                                                Height="28"
+                                                Height="32"
                                                 Padding="1"
                                                 FontSize="11"
                                                 Margin="5,0"
@@ -463,7 +495,7 @@
                                                 Content="削除"
                                                 Style="{StaticResource DangerButton}"
                                                 Width="40"
-                                                Height="28"
+                                                Height="32"
                                                 Padding="1"
                                                 FontSize="11"
                                                 Click="DeleteTask_Click"/>
