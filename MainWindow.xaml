@@ -15,6 +15,16 @@
         Closing="Window_Closing">
     <Window.Resources>
         <local:PriorityBackgroundConverter x:Key="PriorityBackgroundConverter"/>
+        
+        <!-- ListBoxItemスタイル -->
+        <Style x:Key="TaskListBoxItem" TargetType="ListBoxItem">
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#10000000"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- 共通ボタンスタイル -->
         <Style x:Key="ModernButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
             <Setter Property="Margin" Value="2"/>
@@ -146,6 +156,7 @@
                         </StackPanel>
                     </TabItem.Header>
                     <ListBox x:Name="InProgressList"
+                            ItemContainerStyle="{StaticResource TaskListBoxItem}"
                             Margin="5"
                             HorizontalContentAlignment="Stretch"
                             SelectionChanged="TaskList_SelectionChanged"
@@ -167,10 +178,13 @@
                         </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderThickness="0"
+                                <Border BorderThickness="1"
+                                       BorderBrush="#15000000"
+                                       CornerRadius="2"
                                        Padding="12,8"
-                                       Margin="0,3"
-                                       Background="{Binding Priority, Converter={StaticResource PriorityBackgroundConverter}}">
+                                       Margin="1,2"
+                                       Background="{Binding Priority, Converter={StaticResource PriorityBackgroundConverter}}"
+                                       Effect="{DynamicResource MaterialDesignShadowDepth1}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -186,40 +200,40 @@
                                         <!-- Task Name -->
                                         <TextBlock Grid.Column="0"
                                                  Text="{Binding Name}"
-                                                 FontSize="16"
+                                                 FontSize="14"
                                                  FontWeight="SemiBold"
                                                  VerticalAlignment="Center"/>
 
                                         <!-- Time Information -->
-                                        <StackPanel Grid.Column="1" Margin="15,0">
+                                        <StackPanel Grid.Column="1" Margin="10,0">
                                             <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
                                                      FontFamily="Consolas"
-                                                     FontSize="14"
+                                                     FontSize="12"
                                                      Opacity="0.7"/>
                                             <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
                                                      FontFamily="Consolas"
-                                                     FontSize="14"
+                                                     FontSize="12"
                                                      FontWeight="Bold"/>
                                         </StackPanel>
 
                                         <!-- Status Change Buttons -->
                                         <StackPanel Grid.Column="2"
                                                   Orientation="Horizontal"
-                                                  Margin="5,0">
+                                                  Margin="3,0">
                                             <Button Content="完了"
                                                     Style="{StaticResource SuccessButton}"
-                                                    Width="40"
-                                                    Height="32"
+                                                    Width="36"
+                                                    Height="28"
                                                     Padding="1"
-                                                    FontSize="11"
-                                                    Margin="0,0,3,0"
+                                                    FontSize="10"
+                                                    Margin="0,0,2,0"
                                                     Click="CompleteTask_Click"/>
                                             <Button Content="保留"
                                                     Style="{StaticResource ModernButton}"
-                                                    Width="40"
-                                                    Height="32"
+                                                    Width="36"
+                                                    Height="28"
                                                     Padding="1"
-                                                    FontSize="11"
+                                                    FontSize="10"
                                                     Click="SetPendingTask_Click"/>
                                         </StackPanel>
 
@@ -227,17 +241,17 @@
                                         <Button Grid.Column="3"
                                                 Content="削除"
                                                 Style="{StaticResource DangerButton}"
-                                                Width="40"
-                                                Height="32"
+                                                Width="36"
+                                                Height="28"
                                                 Padding="1"
-                                                FontSize="11"
+                                                FontSize="10"
                                                 Click="DeleteTask_Click"/>
 
                                         <!-- Memo -->
                                         <TextBlock Grid.Row="1"
                                                  Grid.ColumnSpan="4"
                                                  Text="{Binding Memo}"
-                                                 Margin="0,8,0,0"
+                                                 Margin="0,1,0,1"
                                                  TextWrapping="Wrap"
                                                  Opacity="0.7">
                                             <TextBlock.Style>
@@ -267,6 +281,7 @@
                         </StackPanel>
                     </TabItem.Header>
                     <ListBox x:Name="PendingList"
+                            ItemContainerStyle="{StaticResource TaskListBoxItem}"
                             Margin="5"
                             HorizontalContentAlignment="Stretch"
                             SelectionChanged="TaskList_SelectionChanged"
@@ -286,10 +301,13 @@
                         </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderThickness="0"
+                                <Border BorderThickness="1"
+                                       BorderBrush="#15000000"
+                                       CornerRadius="2"
                                        Padding="12,8"
-                                       Margin="0,3"
-                                       Background="{Binding Priority, Converter={StaticResource PriorityBackgroundConverter}}">
+                                       Margin="1,2"
+                                       Background="{Binding Priority, Converter={StaticResource PriorityBackgroundConverter}}"
+                                       Effect="{DynamicResource MaterialDesignShadowDepth1}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -305,19 +323,19 @@
                                         <!-- Task Name -->
                                         <TextBlock Grid.Column="0" 
                                                  Text="{Binding Name}" 
-                                                 FontSize="16"
+                                                 FontSize="14"
                                                  FontWeight="SemiBold"
                                                  VerticalAlignment="Center"/>
 
                                         <!-- Time Information -->
-                                        <StackPanel Grid.Column="1" Margin="15,0">
+                                        <StackPanel Grid.Column="1" Margin="10,0">
                                             <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
                                                      FontFamily="Consolas"
-                                                     FontSize="14"
+                                                     FontSize="12"
                                                      Opacity="0.7"/>
                                             <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
                                                      FontFamily="Consolas"
-                                                     FontSize="14"
+                                                     FontSize="12"
                                                      FontWeight="Bold"/>
                                         </StackPanel>
 
@@ -325,29 +343,30 @@
                                         <Button Grid.Column="2"
                                                 Content="復帰"
                                                 Style="{StaticResource ModernButton}"
-                                                Width="40"
-                                                Height="32"
+                                                Width="36"
+                                                Height="28"
                                                 Padding="1"
-                                                FontSize="11"
-                                                Margin="5,0"
+                                                FontSize="10"
+                                                Margin="3,0"
                                                 Click="SetInProgressTask_Click"/>
 
                                         <!-- Delete Button -->
                                         <Button Grid.Column="3"
                                                 Content="削除"
                                                 Style="{StaticResource DangerButton}"
-                                                Width="40"
-                                                Height="32"
+                                                Width="36"
+                                                Height="28"
                                                 Padding="1"
-                                                FontSize="11"
+                                                FontSize="10"
                                                 Click="DeleteTask_Click"/>
 
                                         <!-- Memo -->
                                         <TextBlock Grid.Row="1"
                                                  Grid.ColumnSpan="4"
                                                  Text="{Binding Memo}"
-                                                 Margin="0,8,0,0"
+                                                 Margin="0,1,0,1"
                                                  TextWrapping="Wrap"
+                                                 FontSize="12"
                                                  Opacity="0.7">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
@@ -376,6 +395,7 @@
                         </StackPanel>
                     </TabItem.Header>
                     <ListBox x:Name="CompletedList"
+                            ItemContainerStyle="{StaticResource TaskListBoxItem}"
                             Margin="5"
                             HorizontalContentAlignment="Stretch"
                             SelectionChanged="TaskList_SelectionChanged"
@@ -397,10 +417,13 @@
                         </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderThickness="0"
+                                <Border BorderThickness="1"
+                                       BorderBrush="#15000000"
+                                       CornerRadius="2"
                                        Padding="12,8"
-                                       Margin="0,3"
-                                       Background="{Binding Priority, Converter={StaticResource PriorityBackgroundConverter}}">
+                                       Margin="1,2"
+                                       Background="{Binding Priority, Converter={StaticResource PriorityBackgroundConverter}}"
+                                       Effect="{DynamicResource MaterialDesignShadowDepth1}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -416,23 +439,23 @@
                                         <!-- Task Name -->
                                         <TextBlock Grid.Column="0" 
                                                  Text="{Binding Name}" 
-                                                 FontSize="16"
+                                                 FontSize="14"
                                                  FontWeight="SemiBold"
                                                  VerticalAlignment="Center"/>
 
                                         <!-- Time Information -->
-                                        <StackPanel Grid.Column="1" Margin="15,0">
+                                        <StackPanel Grid.Column="1" Margin="10,0">
                                             <TextBlock Text="{Binding EstimatedTime, StringFormat='予定: {0:hh\\:mm}'}"
                                                      FontFamily="Consolas"
-                                                     FontSize="14"
+                                                     FontSize="12"
                                                      Opacity="0.7"/>
                                             <TextBlock Text="{Binding ElapsedTime, StringFormat='経過: {0:hh\\:mm}'}"
                                                      FontFamily="Consolas"
-                                                     FontSize="14"
+                                                     FontSize="12"
                                                      FontWeight="Bold"/>
                                             <TextBlock Text="{Binding CompletedAt, StringFormat='完了: {0:MM/dd HH:mm}'}"
                                                      FontFamily="Consolas"
-                                                     FontSize="14"
+                                                     FontSize="12"
                                                      Opacity="0.7"/>
                                         </StackPanel>
 
@@ -440,29 +463,30 @@
                                         <Button Grid.Column="2"
                                                 Content="復帰"
                                                 Style="{StaticResource ModernButton}"
-                                                Width="40"
-                                                Height="32"
+                                                Width="36"
+                                                Height="28"
                                                 Padding="1"
-                                                FontSize="11"
-                                                Margin="5,0"
+                                                FontSize="10"
+                                                Margin="3,0"
                                                 Click="SetInProgressTask_Click"/>
 
                                         <!-- Delete Button -->
                                         <Button Grid.Column="3"
                                                 Content="削除"
                                                 Style="{StaticResource DangerButton}"
-                                                Width="40"
-                                                Height="32"
+                                                Width="36"
+                                                Height="28"
                                                 Padding="1"
-                                                FontSize="11"
+                                                FontSize="10"
                                                 Click="DeleteTask_Click"/>
 
                                         <!-- Memo -->
                                         <TextBlock Grid.Row="1"
                                                  Grid.ColumnSpan="4"
                                                  Text="{Binding Memo}"
-                                                 Margin="0,8,0,0"
+                                                 Margin="0,1,0,1"
                                                  TextWrapping="Wrap"
+                                                 FontSize="12"
                                                  Opacity="0.7">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
