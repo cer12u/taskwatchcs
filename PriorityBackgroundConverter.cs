@@ -13,9 +13,9 @@ namespace TaskManager
             {
                 return priority switch
                 {
-                    TaskPriority.High => new SolidColorBrush(Color.FromRgb(255, 245, 245)),   // もっと薄い赤
-                    TaskPriority.Medium => new SolidColorBrush(Color.FromRgb(255, 255, 245)), // もっと薄い黄色
-                    TaskPriority.Low => new SolidColorBrush(Color.FromRgb(245, 255, 245)),    // もっと薄い緑
+                    TaskPriority.High => new SolidColorBrush(Color.FromRgb(255, 235, 235)),   // 薄い赤
+                    TaskPriority.Medium => new SolidColorBrush(Color.FromRgb(255, 255, 235)), // 薄い黄色
+                    TaskPriority.Low => new SolidColorBrush(Color.FromRgb(235, 255, 235)),    // 薄い緑
                     _ => new SolidColorBrush(Colors.Transparent)
                 };
             }
