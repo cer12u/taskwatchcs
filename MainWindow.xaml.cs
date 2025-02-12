@@ -590,6 +590,11 @@ namespace TaskManager
                 {
                     StopTimer();
                 }
+                else if (task == runningTask)
+                {
+                    // 実行中のタスクの通知をキャンセル
+                    StopNotifications();
+                }
 
                 switch (task.Status)
                 {
@@ -617,6 +622,11 @@ namespace TaskManager
                 {
                     StopTimer();
                 }
+                else if (task == runningTask)
+                {
+                    // 実行中のタスクの通知をキャンセル
+                    StopNotifications();
+                }
 
                 inProgressTasks.Remove(task);
                 task.SetPending();
@@ -631,6 +641,12 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
+                if (isRunning)
+                {
+                    // 他のタスクが実行中の場合は通知をキャンセル
+                    StopNotifications();
+                }
+
                 switch (task.Status)
                 {
                     case TaskStatus.Pending:
