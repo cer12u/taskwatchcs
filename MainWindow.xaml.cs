@@ -40,6 +40,8 @@ namespace TaskManager
         private DateTime? lastTaskSwitchTime = null;
         private readonly TimeSpan taskSwitchGracePeriod = TimeSpan.FromSeconds(10);
         private TaskItem? previousRunningTask = null;
+        private TaskItem? lastRunningTask = null;
+        private TimeSpan lastTaskElapsed = TimeSpan.Zero;
 
         public MainWindow()
         {
@@ -183,11 +185,22 @@ namespace TaskManager
         private void Timer_Tick(object? sender, EventArgs e)
         {
             var now = DateTime.Now;
+            var currentTask = GetSelectedTask();
             TimeSpan currentElapsed = now - startTime;
-            TimeSpan totalElapsed = baseElapsedTime + currentElapsed;
-            
-            StopwatchDisplay.Text = totalElapsed.ToString(@"hh\:mm\:ss");
-            StopwatchMilliseconds.Text = $".{(totalElapsed.Milliseconds / 100)}";
+
+            if (currentTask == runningTask)
+            {
+                // 選択中のタスクが実行中のタスクと同じ場合は時間を加算
+                TimeSpan totalElapsed = baseElapsedTime + currentElapsed;
+                StopwatchDisplay.Text = totalElapsed.ToString(@"hh\:mm\:ss");
+                StopwatchMilliseconds.Text = $".{(totalElapsed.Milliseconds / 100)}";
+            }
+            else
+            {
+                // 別のタスクを表示中の場合は、そのタスクの経過時間をそのまま表示
+                StopwatchDisplay.Text = currentTask?.ElapsedTime.ToString(@"hh\:mm\:ss") ?? "00:00:00";
+                StopwatchMilliseconds.Text = $".{(currentTask?.ElapsedTime.Milliseconds ?? 0) / 100}";
+            }
             
             lastTickTime = now;
         }
@@ -228,17 +241,35 @@ namespace TaskManager
                 return;
             }
 
+            // 猶予時間中に新しいタスクを開始した場合、前のタスクの時間を確定
+            if (lastRunningTask != null && lastTaskElapsed > TimeSpan.Zero)
+            {
+                lastRunningTask.AddElapsedTime(lastTaskElapsed);
+                lastRunningTask.IsProcessing = false;
+                if (currentNotificationId != null)
+                {
+                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                    currentNotificationId = null;
+                }
+                SaveTasks();
+            }
+
             startTime = DateTime.Now;
             lastTickTime = startTime;
             timer.Start();
             isRunning = true;
             UpdateTimerControls();
             runningTask = selectedTask;
+
+            // 前のタスクの情報をクリア
+            lastRunningTask = null;
+            lastTaskElapsed = TimeSpan.Zero;
+            lastTaskSwitchTime = null;
+            previousRunningTask = null;
             
             if (selectedTask != null)
             {
                 selectedTask.IsProcessing = true;
-                // 30分後の通知をスケジュール
                 ScheduleNotification(selectedTask);
             }
             
@@ -369,6 +400,11 @@ namespace TaskManager
                     {
                         lastTaskSwitchTime = DateTime.Now;
                         previousRunningTask = runningTask;
+                        lastRunningTask = runningTask;
+                        lastTaskElapsed = DateTime.Now - startTime;
+                        // ボタンを開始状態に変更
+                        isRunning = false;
+                        UpdateTimerControls();
                     }
                     else
                     {
@@ -378,11 +414,16 @@ namespace TaskManager
                             StopTimer();
                             lastTaskSwitchTime = null;
                             previousRunningTask = null;
+                            lastRunningTask = null;
+                            lastTaskElapsed = TimeSpan.Zero;
                         }
                         else if (currentTask == previousRunningTask)
                         {
                             lastTaskSwitchTime = null;
                             previousRunningTask = null;
+                            // 元のタスクに戻った場合は実行中状態に戻す
+                            isRunning = true;
+                            UpdateTimerControls();
                         }
                     }
                 }
