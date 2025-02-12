@@ -49,6 +49,9 @@ namespace TaskManager
             logger = new TaskLogger();
             otherTask = new TaskItem("その他", "選択されていないときの作業時間", TimeSpan.FromHours(24));
 
+            // 起動時に古い通知を全てキャンセル
+            ToastNotificationManagerCompat.History.Clear();
+
             InitializeStopwatch();
             InitializeResetTimer();
             InitializeInactiveCheckTimer();
