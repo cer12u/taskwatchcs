@@ -37,6 +37,9 @@ namespace TaskManager
         private TimeSpan baseElapsedTime;
         private TaskItem? runningTask;
         private string? currentNotificationId = null;
+        private DateTime? lastTaskSwitchTime = null;
+        private readonly TimeSpan taskSwitchGracePeriod = TimeSpan.FromSeconds(10);
+        private TaskItem? previousRunningTask = null;
 
         public MainWindow()
         {
@@ -359,7 +362,30 @@ namespace TaskManager
 
             if (isRunning)
             {
-                StopTimer();
+                var currentTask = GetSelectedTask();
+                if (currentTask != runningTask)
+                {
+                    if (lastTaskSwitchTime == null)
+                    {
+                        lastTaskSwitchTime = DateTime.Now;
+                        previousRunningTask = runningTask;
+                    }
+                    else
+                    {
+                        var timeSinceSwitch = DateTime.Now - lastTaskSwitchTime.Value;
+                        if (timeSinceSwitch > taskSwitchGracePeriod)
+                        {
+                            StopTimer();
+                            lastTaskSwitchTime = null;
+                            previousRunningTask = null;
+                        }
+                        else if (currentTask == previousRunningTask)
+                        {
+                            lastTaskSwitchTime = null;
+                            previousRunningTask = null;
+                        }
+                    }
+                }
             }
 
             var selectedTask = GetSelectedTask();
@@ -540,9 +566,13 @@ namespace TaskManager
 
         private void AddTask_Click(object sender, RoutedEventArgs e)
         {
-            if (isRunning)
+            var wasRunning = isRunning;
+            var previousTask = runningTask;
+            DateTime? switchTime = null;
+
+            if (wasRunning)
             {
-                StopTimer();
+                switchTime = DateTime.Now;
             }
 
             var inputWindow = new TaskInputWindow { Owner = this };
@@ -551,6 +581,25 @@ namespace TaskManager
             {
                 inProgressTasks.Add(inputWindow.CreatedTask);
                 SaveTasks();
+            }
+
+            if (wasRunning && switchTime.HasValue)
+            {
+                var timeSinceSwitch = DateTime.Now - switchTime.Value;
+                if (timeSinceSwitch <= taskSwitchGracePeriod)
+                {
+                    // タイマーを再開
+                    startTime = startTime.Add(timeSinceSwitch);
+                    runningTask = previousTask;
+                    if (runningTask != null)
+                    {
+                        runningTask.IsProcessing = true;
+                    }
+                }
+                else
+                {
+                    StopTimer();
+                }
             }
         }
 
