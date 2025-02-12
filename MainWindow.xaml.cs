@@ -1,6 +1,5 @@
 ﻿﻿using System;
 using System.Collections.ObjectModel;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -23,7 +22,6 @@ namespace TaskManager
         private readonly DispatcherTimer timer = new();
         private readonly DispatcherTimer resetCheckTimer = new();
         private readonly DispatcherTimer inactiveCheckTimer = new();
-        private readonly DispatcherTimer notificationTimer = new();
         private static readonly TimeSpan InactiveDuration = TimeSpan.FromHours(72);
         private DateTime startTime;
         private bool isRunning = false;
@@ -35,13 +33,9 @@ namespace TaskManager
         private readonly TaskItem otherTask;
         private DateTime? lastTickTime;
         private TimeSpan baseElapsedTime;
+        private DateTime lastNotificationTime;
         private TaskItem? runningTask;
         private string? currentNotificationId = null;
-        private DateTime? lastTaskSwitchTime = null;
-        private readonly TimeSpan taskSwitchGracePeriod = TimeSpan.FromSeconds(10);
-        private TaskItem? previousRunningTask = null;
-        private TaskItem? lastRunningTask = null;
-        private TimeSpan lastTaskElapsed = TimeSpan.Zero;
 
         public MainWindow()
         {
@@ -49,13 +43,9 @@ namespace TaskManager
             logger = new TaskLogger();
             otherTask = new TaskItem("その他", "選択されていないときの作業時間", TimeSpan.FromHours(24));
 
-            // 起動時に古い通知を全てキャンセル
-            ToastNotificationManagerCompat.History.Clear();
-
             InitializeStopwatch();
             InitializeResetTimer();
             InitializeInactiveCheckTimer();
-            InitializeNotificationTimer();
             InitializeTasks();
             LoadTasks();
             CheckAndArchiveTasks();
@@ -108,130 +98,6 @@ namespace TaskManager
             inactiveCheckTimer.Start();
         }
 
-        private void InitializeNotificationTimer()
-        {
-            // 既存の通知タイマーの初期化は不要になったため、空にする
-        }
-
-        private void InactiveCheckTimer_Tick(object? sender, EventArgs e)
-        {
-            CheckInactiveTasks();
-        }
-
-        private void CheckInactiveTasks()
-        {
-            var settings = Settings.Instance;
-            if (settings.InactiveTasksEnabled)
-            {
-                var inactiveTasks = inProgressTasks
-                    .Where(task => task.IsInactive(InactiveDuration))
-                    .ToList();
-
-                foreach (var task in inactiveTasks)
-                {
-                    inProgressTasks.Remove(task);
-                    task.SetPending();
-                    pendingTasks.Add(task);
-                    logger.LogTaskStop(task, TimeSpan.Zero);
-                }
-
-                if (inactiveTasks.Any())
-                {
-                    SaveTasks();
-                }
-            }
-        }
-
-        private void ResetCheckTimer_Tick(object? sender, EventArgs e)
-        {
-            CheckAndArchiveTasks();
-            CheckInactiveTasks();
-        }
-
-        private void CheckAndArchiveTasks()
-        {
-            var settings = Settings.Instance;
-            if (settings.NeedsReset())
-            {
-                // 完了済みタスクをアーカイブする
-                var tasksToArchive = completedTasks.ToList();
-                foreach (var task in tasksToArchive)
-                {
-                    completedTasks.Remove(task);
-                }
-
-                // アーカイブしたタスクをファイルに保存
-                var archiveFile = "completed_tasks.json";
-                var existingArchived = new List<TaskItem>();
-                if (File.Exists(archiveFile))
-                {
-                    var json = File.ReadAllText(archiveFile);
-                    existingArchived = JsonSerializer.Deserialize<List<TaskItem>>(json) ?? new List<TaskItem>();
-                }
-                existingArchived.AddRange(tasksToArchive);
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(archiveFile, JsonSerializer.Serialize(existingArchived, options));
-
-                settings.LastResetTime = DateTime.Now;
-                settings.Save();
-                SaveTasks();
-            }
-        }
-
-        private void InitializeTasks()
-        {
-            InProgressList.ItemsSource = inProgressTasks;
-            PendingList.ItemsSource = pendingTasks;
-            CompletedList.ItemsSource = completedTasks;
-        }
-
-        private void Timer_Tick(object? sender, EventArgs e)
-        {
-            var now = DateTime.Now;
-            var currentTask = GetSelectedTask();
-            TimeSpan currentElapsed = now - startTime;
-
-            if (currentTask == runningTask)
-            {
-                // 選択中のタスクが実行中のタスクと同じ場合は時間を加算
-                TimeSpan totalElapsed = baseElapsedTime + currentElapsed;
-                StopwatchDisplay.Text = totalElapsed.ToString(@"hh\:mm\:ss");
-                StopwatchMilliseconds.Text = $".{(totalElapsed.Milliseconds / 100)}";
-            }
-            else
-            {
-                // 別のタスクを表示中の場合は、そのタスクの経過時間をそのまま表示
-                StopwatchDisplay.Text = currentTask?.ElapsedTime.ToString(@"hh\:mm\:ss") ?? "00:00:00";
-                StopwatchMilliseconds.Text = $".{(currentTask?.ElapsedTime.Milliseconds ?? 0) / 100}";
-            }
-            
-            lastTickTime = now;
-        }
-
-        private void UpdateTimerControls()
-        {
-            var selectedTask = GetSelectedTask();
-            bool canStart = selectedTask == null || selectedTask.Status == TaskStatus.InProgress;
-            
-            StartStopButton.Content = isRunning ? "停止" : "開始";
-            StartStopButton.Style = isRunning ? 
-                FindResource("DangerButton") as Style : 
-                FindResource("SuccessButton") as Style;
-            StartStopButton.IsEnabled = !isRunning || canStart;
-        }
-
-        private void StartStopButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (isRunning)
-            {
-                StopTimer();
-            }
-            else
-            {
-                StartTimer();
-            }
-        }
-
         private void StartTimer()
         {
             var selectedTask = GetSelectedTask();
@@ -249,6 +115,11 @@ namespace TaskManager
             {
                 lastRunningTask.AddElapsedTime(lastTaskElapsed);
                 lastRunningTask.IsProcessing = false;
+                if (currentNotificationId != null)
+                {
+                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                    currentNotificationId = null;
+                }
                 SaveTasks();
             }
 
@@ -265,10 +136,10 @@ namespace TaskManager
             lastTaskSwitchTime = null;
             previousRunningTask = null;
 
-            // タスクが選択されている場合のみ通知をスケジュール
             if (selectedTask != null)
             {
                 selectedTask.IsProcessing = true;
+                // 30分後の通知をスケジュール
                 ScheduleNotification(selectedTask);
             }
 
@@ -282,9 +153,10 @@ namespace TaskManager
                 timer.Stop();
                 isRunning = false;
                 UpdateTimerControls();
+
                 var duration = DateTime.Now - startTime;
 
-                // 実行中の通知をキャンセル
+                // 通知をキャンセル
                 if (currentNotificationId != null)
                 {
                     ToastNotificationManagerCompat.History.Remove(currentNotificationId);
@@ -332,11 +204,10 @@ namespace TaskManager
 
         private void ScheduleNotification(TaskItem task)
         {
-            // 前回の通知をキャンセル
+            // 既存の通知があれば削除
             if (currentNotificationId != null)
             {
                 ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                currentNotificationId = null;
             }
 
             var notificationId = Guid.NewGuid().ToString();
@@ -345,52 +216,144 @@ namespace TaskManager
             // 30分後の通知をスケジュール
             var scheduledTime = DateTime.Now.AddMinutes(30);
 
-            // 開始から30分経過の通知
+            // 基本の通知
             var builder = new ToastContentBuilder()
                 .AddText($"タスク: {task.Name}")
                 .AddText("開始から30分が経過しました。")
                 .SetToastScenario(ToastScenario.Default);
+
+            // 予定時間を超過している場合は警告を追加
+            if (task.ElapsedTime > task.EstimatedTime)
+            {
+                builder.AddText($"予定時間を{(task.ElapsedTime - task.EstimatedTime).TotalMinutes:0}分超過しています。");
+            }
 
             builder.Schedule(scheduledTime, toast =>
             {
                 toast.Tag = notificationId;
                 toast.Group = "TaskManager";
             });
+        }
 
-            // 予定時間超過の通知もスケジュール（予定時間が設定されている場合のみ）
-            if (task.EstimatedTime > TimeSpan.Zero)
+        private void InactiveCheckTimer_Tick(object? sender, EventArgs e)
+        {
+            CheckInactiveTasks();
+        }
+
+        private void CheckInactiveTasks()
+        {
+            var settings = Settings.Instance;
+            if (settings.InactiveTasksEnabled)
             {
-                var remainingTime = task.EstimatedTime - task.ElapsedTime;
-                if (remainingTime > TimeSpan.Zero)
+                var inactiveTasks = inProgressTasks
+                    .Where(task => task.IsInactive(InactiveDuration))
+                    .ToList();
+
+                foreach (var task in inactiveTasks)
                 {
-                    var overtimeNotificationId = Guid.NewGuid().ToString();
-                    var overtimeBuilder = new ToastContentBuilder()
-                        .AddText($"タスク: {task.Name}")
-                        .AddText("予定時間を超過しました。")
-                        .SetToastScenario(ToastScenario.Default);
+                    inProgressTasks.Remove(task);
+                    task.SetPending();
+                    pendingTasks.Add(task);
+                    logger.LogTaskStop(task, TimeSpan.Zero);
+                }
 
-                    overtimeBuilder.Schedule(DateTime.Now.Add(remainingTime), toast =>
-                    {
-                        toast.Tag = overtimeNotificationId;
-                        toast.Group = "TaskManager";
-                    });
-
-                    // 両方の通知IDを保持
-                    currentNotificationId = $"{notificationId};{overtimeNotificationId}";
+                if (inactiveTasks.Any())
+                {
+                    SaveTasks();
                 }
             }
         }
 
-        private void StopNotifications()
+        private void ResetCheckTimer_Tick(object? sender, EventArgs e)
         {
-            if (currentNotificationId != null)
+            CheckAndArchiveTasks();
+            CheckInactiveTasks();
+        }
+
+        private void CheckAndArchiveTasks()
+        {
+            var settings = Settings.Instance;
+            if (settings.NeedsReset())
             {
-                // 複数の通知IDがある場合はセミコロンで分割
-                foreach (var id in currentNotificationId.Split(';'))
+                if (settings.AutoArchiveEnabled)
                 {
-                    ToastNotificationManagerCompat.History.Remove(id);
+                    ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
                 }
-                currentNotificationId = null;
+                settings.UpdateLastResetTime();
+            }
+        }
+
+        private void ArchiveCompletedTasks(DateTime date)
+        {
+            try
+            {
+                var tasksToArchive = completedTasks
+                    .Where(t => t.CompletedAt?.Date <= date.Date)
+                    .ToList();
+
+                if (tasksToArchive.Any())
+                {
+                    var archiveFile = Settings.GetArchiveFilePath(date);
+                    var json = JsonSerializer.Serialize(tasksToArchive);
+                    File.WriteAllText(archiveFile, json);
+
+                    foreach (var task in tasksToArchive)
+                    {
+                        completedTasks.Remove(task);
+                    }
+
+                    SaveTasks();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"タスクのアーカイブ中にエラーが発生しました。\n{ex.Message}",
+                              "エラー",
+                              MessageBoxButton.OK,
+                              MessageBoxImage.Error);
+            }
+        }
+
+        private void InitializeTasks()
+        {
+            InProgressList.ItemsSource = inProgressTasks;
+            PendingList.ItemsSource = pendingTasks;
+            CompletedList.ItemsSource = completedTasks;
+        }
+
+        private void Timer_Tick(object? sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+            TimeSpan currentElapsed = now - startTime;
+            TimeSpan totalElapsed = baseElapsedTime + currentElapsed;
+            
+            StopwatchDisplay.Text = totalElapsed.ToString(@"hh\:mm\:ss");
+            StopwatchMilliseconds.Text = $".{(totalElapsed.Milliseconds / 100)}";
+            
+            lastTickTime = now;
+        }
+
+        private void UpdateTimerControls()
+        {
+            var selectedTask = GetSelectedTask();
+            bool canStart = selectedTask == null || selectedTask.Status == TaskStatus.InProgress;
+            
+            StartStopButton.Content = isRunning ? "停止" : "開始";
+            StartStopButton.Style = isRunning ? 
+                FindResource("DangerButton") as Style : 
+                FindResource("SuccessButton") as Style;
+            StartStopButton.IsEnabled = !isRunning || canStart;
+        }
+
+        private void StartStopButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (isRunning)
+            {
+                StopTimer();
+            }
+            else
+            {
+                StartTimer();
             }
         }
 
@@ -435,48 +398,7 @@ namespace TaskManager
 
             if (isRunning)
             {
-                var currentTask = GetSelectedTask();
-                if (currentTask != runningTask)
-                {
-                    // 前の通知をキャンセル
-                    StopNotifications();
-
-                    if (lastTaskSwitchTime == null)
-                    {
-                        lastTaskSwitchTime = DateTime.Now;
-                        previousRunningTask = runningTask;
-                        lastRunningTask = runningTask;
-                        lastTaskElapsed = DateTime.Now - startTime;
-                        // ボタンを開始状態に変更
-                        isRunning = false;
-                        UpdateTimerControls();
-                    }
-                    else
-                    {
-                        var timeSinceSwitch = DateTime.Now - lastTaskSwitchTime.Value;
-                        if (timeSinceSwitch > taskSwitchGracePeriod)
-                        {
-                            StopTimer();
-                            lastTaskSwitchTime = null;
-                            previousRunningTask = null;
-                            lastRunningTask = null;
-                            lastTaskElapsed = TimeSpan.Zero;
-                        }
-                        else if (currentTask == previousRunningTask)
-                        {
-                            lastTaskSwitchTime = null;
-                            previousRunningTask = null;
-                            // 元のタスクに戻った場合は実行中状態に戻す
-                            isRunning = true;
-                            UpdateTimerControls();
-                            // 元のタスクの通知を再スケジュール
-                            if (currentTask != null)
-                            {
-                                ScheduleNotification(currentTask);
-                            }
-                        }
-                    }
-                }
+                StopTimer();
             }
 
             var selectedTask = GetSelectedTask();
@@ -590,11 +512,6 @@ namespace TaskManager
                 {
                     StopTimer();
                 }
-                else if (task == runningTask)
-                {
-                    // 実行中のタスクの通知をキャンセル
-                    StopNotifications();
-                }
 
                 switch (task.Status)
                 {
@@ -622,11 +539,6 @@ namespace TaskManager
                 {
                     StopTimer();
                 }
-                else if (task == runningTask)
-                {
-                    // 実行中のタスクの通知をキャンセル
-                    StopNotifications();
-                }
 
                 inProgressTasks.Remove(task);
                 task.SetPending();
@@ -641,12 +553,6 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
-                if (isRunning)
-                {
-                    // 他のタスクが実行中の場合は通知をキャンセル
-                    StopNotifications();
-                }
-
                 switch (task.Status)
                 {
                     case TaskStatus.Pending:
@@ -673,13 +579,9 @@ namespace TaskManager
 
         private void AddTask_Click(object sender, RoutedEventArgs e)
         {
-            var wasRunning = isRunning;
-            var previousTask = runningTask;
-            DateTime? switchTime = null;
-
-            if (wasRunning)
+            if (isRunning)
             {
-                switchTime = DateTime.Now;
+                StopTimer();
             }
 
             var inputWindow = new TaskInputWindow { Owner = this };
@@ -688,25 +590,6 @@ namespace TaskManager
             {
                 inProgressTasks.Add(inputWindow.CreatedTask);
                 SaveTasks();
-            }
-
-            if (wasRunning && switchTime.HasValue)
-            {
-                var timeSinceSwitch = DateTime.Now - switchTime.Value;
-                if (timeSinceSwitch <= taskSwitchGracePeriod)
-                {
-                    // タイマーを再開
-                    startTime = startTime.Add(timeSinceSwitch);
-                    runningTask = previousTask;
-                    if (runningTask != null)
-                    {
-                        runningTask.IsProcessing = true;
-                    }
-                }
-                else
-                {
-                    StopTimer();
-                }
             }
         }
 
@@ -734,7 +617,6 @@ namespace TaskManager
             {
                 StopTimer();
             }
-            StopNotifications(); // アプリケーション終了時に全ての通知をキャンセル
             resetCheckTimer.Stop();
             inactiveCheckTimer.Stop();
             SaveTasks();
