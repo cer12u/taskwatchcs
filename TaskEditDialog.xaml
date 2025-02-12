@@ -67,23 +67,25 @@
             <TextBlock Text="タイトル"
                      Grid.Row="0"
                      Style="{StaticResource MaterialDesignBody1TextBlock}"
-                     Margin="0,0,0,5"/>
+                     FontSize="11"
+                     Margin="0,0,0,2"/>
             <TextBox x:Name="TitleTextBox"
                     Grid.Row="1"
                     Style="{StaticResource MaterialDesignTextBox}"
-                    Height="60"
+                    Height="40"
                     FontSize="16"
-                    Margin="0,0,0,15"/>
+                    Margin="0,0,0,8"/>
 
             <!-- 優先度選択 -->
             <TextBlock Text="優先度"
                      Grid.Row="2"
                      Style="{StaticResource MaterialDesignBody1TextBlock}"
-                     Margin="0,0,0,5"/>
+                     FontSize="11"
+                     Margin="0,0,0,2"/>
             <ComboBox x:Name="PriorityComboBox"
                     Grid.Row="3"
                     Style="{StaticResource MaterialDesignComboBox}"
-                    Margin="0,0,0,15">
+                    Margin="0,0,0,8">
                 <ComboBoxItem Content="低" Tag="0"/>
                 <ComboBoxItem Content="中" Tag="1"/>
                 <ComboBoxItem Content="高" Tag="2"/>
@@ -93,26 +95,28 @@
             <TextBlock Text="メモ"
                      Grid.Row="4"
                      Style="{StaticResource MaterialDesignBody1TextBlock}"
-                     Margin="0,0,0,5"/>
+                     FontSize="11"
+                     Margin="0,0,0,2"/>
             <TextBox x:Name="MemoTextBox"
                     Grid.Row="5"
                     Style="{StaticResource MaterialDesignTextBox}"
-                    Height="150"
+                    Height="120"
                     TextWrapping="Wrap"
                     AcceptsReturn="True"
                     VerticalScrollBarVisibility="Auto"
-                    Margin="0,0,0,15"/>
+                    Margin="0,0,0,8"/>
 
             <!-- 予定時間 -->
             <TextBlock Text="予定時間"
                      Grid.Row="6"
                      Style="{StaticResource MaterialDesignBody1TextBlock}"
-                     Margin="0,0,0,5"/>
+                     FontSize="11"
+                     Margin="0,0,0,2"/>
             <Border Grid.Row="7" 
                     Background="{DynamicResource MaterialDesignChipBackground}"
                     CornerRadius="4"
-                    Padding="15"
-                    Margin="0,0,0,15">
+                    Padding="8,6"
+                    Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal" 
                           HorizontalAlignment="Left">
                     <ComboBox x:Name="EstimatedHoursComboBox"
@@ -156,14 +160,15 @@
             <TextBlock Text="経過時間 (HH:MM:SS形式)"
                      Grid.Row="8"
                      Style="{StaticResource MaterialDesignBody1TextBlock}"
-                     Margin="0,0,0,5"/>
-            <Border Grid.Row="8"
+                     FontSize="11"
+                     Margin="0,0,0,2"/>
+            <Border Grid.Row="9"
                     Background="{DynamicResource MaterialDesignChipBackground}"
                     CornerRadius="4"
-                    Padding="15"
+                    Padding="8,6"
                     Width="150"
                     HorizontalAlignment="Left"
-                    Margin="0,25,0,20">
+                    Margin="0,0,0,8">
                 <TextBox x:Name="ElapsedTimeTextBox"
                         Style="{StaticResource MaterialDesignTextBox}"
                         TextAlignment="Center"
