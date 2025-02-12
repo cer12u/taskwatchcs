@@ -153,7 +153,7 @@
             </Border>
 
             <!-- 経過時間 -->
-            <TextBlock Text="経過時間"
+            <TextBlock Text="経過時間 (HH:MM:SS形式)"
                      Grid.Row="8"
                      Style="{StaticResource MaterialDesignBody1TextBlock}"
                      Margin="0,0,0,5"/>
@@ -170,9 +170,10 @@
                         FontFamily="Consolas"
                         FontSize="16"
                         Text="00:00:00"
-                        IsReadOnly="True"
+                        IsReadOnly="False"
                         BorderThickness="0"
-                        Background="Transparent"/>
+                        Background="Transparent"
+                        ToolTip="HH:MM:SS形式で入力してください"/>
             </Border>
 
                 </Grid>

@@ -25,6 +25,7 @@ namespace TaskManager
             MemoTextBox.Text = memo;
             ElapsedTime = elapsedTime;
             ElapsedTimeTextBox.Text = elapsedTime.ToString(@"hh\:mm\:ss");
+            ElapsedTimeTextBox.TextChanged += ElapsedTimeTextBox_TextChanged;
             Priority = priority;
 
             // 時間の選択肢を設定
@@ -72,8 +73,32 @@ namespace TaskManager
             Memo = MemoTextBox.Text;
             Priority = (TaskPriority)PriorityComboBox.SelectedIndex;
 
-            DialogResult = true;
-            Close();
+            // 予定時間の更新
+            if (EstimatedHoursComboBox.SelectedItem != null && EstimatedMinutesComboBox.SelectedItem != null)
+            {
+                int hours = (int)EstimatedHoursComboBox.SelectedItem;
+                int minutes = (int)EstimatedMinutesComboBox.SelectedItem;
+                EstimatedTime = new TimeSpan(hours, minutes, 0);
+            }
+
+            // 経過時間の検証と更新
+            if (TimeSpan.TryParse(ElapsedTimeTextBox.Text, out TimeSpan elapsedTime))
+            {
+                if (elapsedTime.TotalHours > 999999) // 不当に大きな値をチェック
+                {
+                    MessageBox.Show("経過時間が大きすぎます。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                ElapsedTime = elapsedTime;
+                DialogResult = true;
+                Close();
+            }
+            else
+            {
+                MessageBox.Show("経過時間の形式が正しくありません。HH:MM:SS形式で入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ElapsedTimeTextBox.Focus();
+                return;
+            }
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
@@ -99,6 +124,56 @@ namespace TaskManager
                 int hours = (int)EstimatedHoursComboBox.SelectedItem;
                 int minutes = (int)EstimatedMinutesComboBox.SelectedItem;
                 EstimatedTime = new TimeSpan(hours, minutes, 0);
+            }
+        }
+
+        private void ElapsedTimeTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (TimeSpan.TryParse(ElapsedTimeTextBox.Text, out TimeSpan parsed))
+            {
+                ElapsedTimeTextBox.Background = Brushes.White;
+                ElapsedTimeTextBox.ToolTip = null;
+            }
+            else
+            {
+                ElapsedTimeTextBox.Background = new SolidColorBrush(Color.FromRgb(255, 200, 200));
+                ElapsedTimeTextBox.ToolTip = "形式: HH:MM:SS";
+            }
+        }
+
+        private void OkButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(TitleTextBox.Text))
+            {
+                MessageBox.Show("タスク名を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            TaskName = TitleTextBox.Text.Trim();
+            Memo = MemoTextBox.Text.Trim();
+            Priority = (TaskPriority)PriorityComboBox.SelectedIndex;
+
+            // 予定時間の取得
+            int hours = (int)EstimatedHoursComboBox.SelectedItem;
+            int minutes = (int)EstimatedMinutesComboBox.SelectedItem;
+            EstimatedTime = new TimeSpan(hours, minutes, 0);
+
+            // 経過時間の検証
+            if (TimeSpan.TryParse(ElapsedTimeTextBox.Text, out TimeSpan elapsedTime))
+            {
+                if (elapsedTime.TotalHours > 999999) // 不当に大きな値をチェック
+                {
+                    MessageBox.Show("経過時間が大きすぎます。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                ElapsedTime = elapsedTime;
+                DialogResult = true;
+                Close();
+            }
+            else
+            {
+                MessageBox.Show("経過時間の形式が正しくありません。HH:MM:SS形式で入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ElapsedTimeTextBox.Focus();
             }
         }
     }

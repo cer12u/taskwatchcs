@@ -1,5 +1,6 @@
 ﻿﻿using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -34,8 +35,8 @@ namespace TaskManager
         private readonly TaskItem otherTask;
         private DateTime? lastTickTime;
         private TimeSpan baseElapsedTime;
-        private DateTime lastNotificationTime;
         private TaskItem? runningTask;
+        private string? currentNotificationId = null;
 
         public MainWindow()
         {
@@ -101,58 +102,7 @@ namespace TaskManager
 
         private void InitializeNotificationTimer()
         {
-            notificationTimer.Interval = TimeSpan.FromMinutes(1);
-            notificationTimer.Tick += NotificationTimer_Tick;
-            notificationTimer.Start();
-            lastNotificationTime = DateTime.Now;
-        }
-
-        private void NotificationTimer_Tick(object? sender, EventArgs e)
-        {
-            var settings = Settings.Instance;
-            if (!settings.NotificationsEnabled || !isRunning)
-                return;
-
-            var currentTask = GetSelectedTask();
-            if (currentTask == null)
-                return;
-
-            var now = DateTime.Now;
-            var elapsedSinceLastNotification = now - lastNotificationTime;
-
-            if (elapsedSinceLastNotification.TotalMinutes >= settings.NotificationInterval)
-            {
-                ShowNotification(
-                    "タスク実行中",
-                    $"{currentTask.Name}の作業時間が{settings.NotificationInterval}分経過しました。",
-                    "TaskInterval"
-                );
-                lastNotificationTime = now;
-            }
-
-            if (settings.EstimatedTimeNotificationEnabled &&
-                currentTask.ElapsedTime > currentTask.EstimatedTime &&
-                currentTask.ElapsedTime.TotalMinutes % settings.NotificationInterval == 0)
-            {
-                ShowNotification(
-                    "予定時間超過",
-                    $"{currentTask.Name}が予定時間を{(currentTask.ElapsedTime - currentTask.EstimatedTime).TotalMinutes:0}分超過しています。",
-                    "TaskOvertime"
-                );
-            }
-        }
-
-        private void ShowNotification(string title, string message, string tag)
-        {
-            new ToastContentBuilder()
-                .AddText(title)
-                .AddText(message)
-                .SetToastScenario(ToastScenario.Default)
-                .Show(toast =>
-                {
-                    toast.Tag = tag;
-                    toast.Group = "TaskManager";
-                });
+            // 既存の通知タイマーの初期化は不要になったため、空にする
         }
 
         private void InactiveCheckTimer_Tick(object? sender, EventArgs e)
@@ -195,42 +145,28 @@ namespace TaskManager
             var settings = Settings.Instance;
             if (settings.NeedsReset())
             {
-                if (settings.AutoArchiveEnabled)
+                // 完了済みタスクをアーカイブする
+                var tasksToArchive = completedTasks.ToList();
+                foreach (var task in tasksToArchive)
                 {
-                    ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
+                    completedTasks.Remove(task);
                 }
-                settings.UpdateLastResetTime();
-            }
-        }
 
-        private void ArchiveCompletedTasks(DateTime date)
-        {
-            try
-            {
-                var tasksToArchive = completedTasks
-                    .Where(t => t.CompletedAt?.Date <= date.Date)
-                    .ToList();
-
-                if (tasksToArchive.Any())
+                // アーカイブしたタスクをファイルに保存
+                var archiveFile = "completed_tasks.json";
+                var existingArchived = new List<TaskItem>();
+                if (File.Exists(archiveFile))
                 {
-                    var archiveFile = Settings.GetArchiveFilePath(date);
-                    var json = JsonSerializer.Serialize(tasksToArchive);
-                    File.WriteAllText(archiveFile, json);
-
-                    foreach (var task in tasksToArchive)
-                    {
-                        completedTasks.Remove(task);
-                    }
-
-                    SaveTasks();
+                    var json = File.ReadAllText(archiveFile);
+                    existingArchived = JsonSerializer.Deserialize<List<TaskItem>>(json) ?? new List<TaskItem>();
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"タスクのアーカイブ中にエラーが発生しました。\n{ex.Message}",
-                              "エラー",
-                              MessageBoxButton.OK,
-                              MessageBoxImage.Error);
+                existingArchived.AddRange(tasksToArchive);
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(archiveFile, JsonSerializer.Serialize(existingArchived, options));
+
+                settings.LastResetTime = DateTime.Now;
+                settings.Save();
+                SaveTasks();
             }
         }
 
@@ -273,30 +209,37 @@ namespace TaskManager
             }
             else
             {
-                var selectedTask = GetSelectedTask();
-                if (selectedTask != null && selectedTask.Status != TaskStatus.InProgress)
-                {
-                    MessageBox.Show("進行中のタスクのみ時間を記録できます。", 
-                                  "警告", 
-                                  MessageBoxButton.OK, 
-                                  MessageBoxImage.Warning);
-                    return;
-                }
-
-                startTime = DateTime.Now;
-                lastTickTime = startTime;
-                timer.Start();
-                isRunning = true;
-                UpdateTimerControls();
-
-                runningTask = selectedTask;
-                var currentTask = selectedTask ?? otherTask;
-                if (selectedTask != null)
-                {
-                    selectedTask.IsProcessing = true;
-                }
-                logger.LogTaskStart(currentTask);
+                StartTimer();
             }
+        }
+
+        private void StartTimer()
+        {
+            var selectedTask = GetSelectedTask();
+            if (selectedTask != null && selectedTask.Status != TaskStatus.InProgress)
+            {
+                MessageBox.Show("進行中のタスクのみ時間を記録できます。",
+                              "警告",
+                              MessageBoxButton.OK,
+                              MessageBoxImage.Warning);
+                return;
+            }
+
+            startTime = DateTime.Now;
+            lastTickTime = startTime;
+            timer.Start();
+            isRunning = true;
+            UpdateTimerControls();
+            runningTask = selectedTask;
+            
+            if (selectedTask != null)
+            {
+                selectedTask.IsProcessing = true;
+                // 30分後の通知をスケジュール
+                ScheduleNotification(selectedTask);
+            }
+            
+            logger.LogTaskStart(selectedTask ?? otherTask);
         }
 
         private void StopTimer()
@@ -306,8 +249,14 @@ namespace TaskManager
                 timer.Stop();
                 isRunning = false;
                 UpdateTimerControls();
-
                 var duration = DateTime.Now - startTime;
+
+                // 実行中の通知をキャンセル
+                if (currentNotificationId != null)
+                {
+                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                    currentNotificationId = null;
+                }
 
                 if (runningTask != null)
                 {
@@ -346,6 +295,27 @@ namespace TaskManager
                 StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
                 StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
             }
+        }
+
+        private void ScheduleNotification(TaskItem task)
+        {
+            var notificationId = Guid.NewGuid().ToString();
+            currentNotificationId = notificationId;
+
+            // 30分後の通知をスケジュール
+            var scheduledTime = DateTime.Now.AddMinutes(30);
+            
+            var builder = new ToastContentBuilder()
+                .AddText($"タスク: {task.Name}")
+                .AddText("開始から30分が経過しました。")
+                .SetToastScenario(ToastScenario.Default);
+
+            // 通知をスケジュール
+            builder.Schedule(scheduledTime, toast =>
+            {
+                toast.Tag = notificationId;
+                toast.Group = "TaskManager";
+            });
         }
 
         private void ListBox_MouseDown(object sender, MouseButtonEventArgs e)
