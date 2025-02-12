@@ -39,3 +39,5 @@ msbuild.wrn
 _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
+
+build_log.txt
