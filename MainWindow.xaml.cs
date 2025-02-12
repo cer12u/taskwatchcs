@@ -246,11 +246,6 @@ namespace TaskManager
             {
                 lastRunningTask.AddElapsedTime(lastTaskElapsed);
                 lastRunningTask.IsProcessing = false;
-                if (currentNotificationId != null)
-                {
-                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                    currentNotificationId = null;
-                }
                 SaveTasks();
             }
 
@@ -266,13 +261,14 @@ namespace TaskManager
             lastTaskElapsed = TimeSpan.Zero;
             lastTaskSwitchTime = null;
             previousRunningTask = null;
-            
+
+            // タスクが選択されている場合のみ通知をスケジュール
             if (selectedTask != null)
             {
                 selectedTask.IsProcessing = true;
                 ScheduleNotification(selectedTask);
             }
-            
+
             logger.LogTaskStart(selectedTask ?? otherTask);
         }
 
@@ -333,23 +329,66 @@ namespace TaskManager
 
         private void ScheduleNotification(TaskItem task)
         {
+            // 前回の通知をキャンセル
+            if (currentNotificationId != null)
+            {
+                ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                currentNotificationId = null;
+            }
+
             var notificationId = Guid.NewGuid().ToString();
             currentNotificationId = notificationId;
 
             // 30分後の通知をスケジュール
             var scheduledTime = DateTime.Now.AddMinutes(30);
-            
+
+            // 開始から30分経過の通知
             var builder = new ToastContentBuilder()
                 .AddText($"タスク: {task.Name}")
                 .AddText("開始から30分が経過しました。")
                 .SetToastScenario(ToastScenario.Default);
 
-            // 通知をスケジュール
             builder.Schedule(scheduledTime, toast =>
             {
                 toast.Tag = notificationId;
                 toast.Group = "TaskManager";
             });
+
+            // 予定時間超過の通知もスケジュール（予定時間が設定されている場合のみ）
+            if (task.EstimatedTime > TimeSpan.Zero)
+            {
+                var remainingTime = task.EstimatedTime - task.ElapsedTime;
+                if (remainingTime > TimeSpan.Zero)
+                {
+                    var overtimeNotificationId = Guid.NewGuid().ToString();
+                    var overtimeBuilder = new ToastContentBuilder()
+                        .AddText($"タスク: {task.Name}")
+                        .AddText("予定時間を超過しました。")
+                        .SetToastScenario(ToastScenario.Default);
+
+                    overtimeBuilder.Schedule(DateTime.Now.Add(remainingTime), toast =>
+                    {
+                        toast.Tag = overtimeNotificationId;
+                        toast.Group = "TaskManager";
+                    });
+
+                    // 両方の通知IDを保持
+                    currentNotificationId = $"{notificationId};{overtimeNotificationId}";
+                }
+            }
+        }
+
+        private void StopNotifications()
+        {
+            if (currentNotificationId != null)
+            {
+                // 複数の通知IDがある場合はセミコロンで分割
+                foreach (var id in currentNotificationId.Split(';'))
+                {
+                    ToastNotificationManagerCompat.History.Remove(id);
+                }
+                currentNotificationId = null;
+            }
         }
 
         private void ListBox_MouseDown(object sender, MouseButtonEventArgs e)
