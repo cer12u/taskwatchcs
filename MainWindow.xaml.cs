@@ -435,6 +435,9 @@ namespace TaskManager
                 var currentTask = GetSelectedTask();
                 if (currentTask != runningTask)
                 {
+                    // 前の通知をキャンセル
+                    StopNotifications();
+
                     if (lastTaskSwitchTime == null)
                     {
                         lastTaskSwitchTime = DateTime.Now;
@@ -463,6 +466,11 @@ namespace TaskManager
                             // 元のタスクに戻った場合は実行中状態に戻す
                             isRunning = true;
                             UpdateTimerControls();
+                            // 元のタスクの通知を再スケジュール
+                            if (currentTask != null)
+                            {
+                                ScheduleNotification(currentTask);
+                            }
                         }
                     }
                 }
@@ -707,6 +715,7 @@ namespace TaskManager
             {
                 StopTimer();
             }
+            StopNotifications(); // アプリケーション終了時に全ての通知をキャンセル
             resetCheckTimer.Stop();
             inactiveCheckTimer.Stop();
             SaveTasks();
