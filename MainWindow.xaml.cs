@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -23,24 +23,70 @@ namespace TaskManager
         private readonly DispatcherTimer resetCheckTimer = new();
         private readonly DispatcherTimer inactiveCheckTimer = new();
         private static readonly TimeSpan InactiveDuration = TimeSpan.FromHours(72);
-        private DateTime startTime;
-        private bool isRunning = false;
         private readonly ObservableCollection<TaskItem> inProgressTasks = new();
         private readonly ObservableCollection<TaskItem> pendingTasks = new();
         private readonly ObservableCollection<TaskItem> completedTasks = new();
         private readonly string taskSaveFile = "tasks.json";
         private readonly TaskLogger logger;
         private readonly TaskItem otherTask;
-        private DateTime? lastTickTime;
-        private TimeSpan baseElapsedTime;
-        private DateTime lastNotificationTime;
-        private TaskItem? runningTask;
         private string? currentNotificationId = null;
-        private DateTime? lastTaskSwitchTime = null;
-        private readonly TimeSpan taskSwitchGracePeriod = TimeSpan.FromSeconds(10);
-        private TaskItem? previousRunningTask = null;
-        private TaskItem? lastRunningTask = null;
-        private TimeSpan lastTaskElapsed = TimeSpan.Zero;
+        private readonly TimerState timerState = new();
+
+        // タイマー状態管理
+        private class TimerState
+        {
+            public DateTime StartTime { get; private set; }
+            public TaskItem? ActiveTask { get; private set; }
+            public bool IsRunning { get; private set; }
+            public TimeSpan CurrentElapsed { get; private set; }
+
+            public TimerState()
+            {
+                Reset();
+            }
+
+            public void Start(TaskItem? task)
+            {
+                ActiveTask = task;
+                StartTime = DateTime.Now;
+                IsRunning = true;
+                CurrentElapsed = task?.ElapsedTime ?? TimeSpan.Zero;
+            }
+
+            public void Stop()
+            {
+                if (IsRunning && ActiveTask != null)
+                {
+                    var elapsed = DateTime.Now - StartTime;
+                    ActiveTask.AddElapsedTime(elapsed);
+                    ActiveTask.IsProcessing = false;
+                }
+                Reset();
+            }
+
+            public void Reset()
+            {
+                StartTime = DateTime.Now;
+                ActiveTask = null;
+                IsRunning = false;
+                CurrentElapsed = TimeSpan.Zero;
+            }
+
+            public TimeSpan GetDisplayTime(TaskItem? selectedTask)
+            {
+                if (!IsRunning)
+                {
+                    return selectedTask?.ElapsedTime ?? TimeSpan.Zero;
+                }
+
+                if (selectedTask == ActiveTask)
+                {
+                    return CurrentElapsed + (DateTime.Now - StartTime);
+                }
+
+                return selectedTask?.ElapsedTime ?? TimeSpan.Zero;
+            }
+        }
 
         public MainWindow()
         {
@@ -125,30 +171,8 @@ namespace TaskManager
                 return;
             }
 
-            // 猶予時間中に新しいタスクを開始した場合、前のタスクの時間を確定
-            if (lastRunningTask != null && lastTaskElapsed > TimeSpan.Zero)
-            {
-                lastRunningTask.AddElapsedTime(lastTaskElapsed);
-                lastRunningTask.IsProcessing = false;
-                if (currentNotificationId != null)
-                {
-                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                    currentNotificationId = null;
-                }
-                SaveTasks();
-            }
-
-            startTime = DateTime.Now;
-            lastTickTime = startTime;
+            timerState.Start(selectedTask);
             timer.Start();
-            isRunning = true;
-            runningTask = selectedTask;
-
-            // 前のタスクの情報をクリア
-            lastRunningTask = null;
-            lastTaskElapsed = TimeSpan.Zero;
-            lastTaskSwitchTime = null;
-            previousRunningTask = null;
 
             if (selectedTask != null)
             {
@@ -162,13 +186,9 @@ namespace TaskManager
 
         private void StopTimer()
         {
-            if (isRunning)
+            if (timerState.IsRunning)
             {
                 timer.Stop();
-                isRunning = false;
-                UpdateTimerControls();
-
-                var duration = DateTime.Now - startTime;
 
                 // 通知をキャンセル
                 if (currentNotificationId != null)
@@ -177,42 +197,18 @@ namespace TaskManager
                     currentNotificationId = null;
                 }
 
+                var runningTask = timerState.ActiveTask;
+                timerState.Stop();
+
+                var selectedTask = GetSelectedTask();
+                UpdateDisplayTime(selectedTask?.ElapsedTime ?? TimeSpan.Zero);
+                UpdateTimerControls();
+                
                 if (runningTask != null)
                 {
-                    runningTask.IsProcessing = false;
+                    logger.LogTaskStop(runningTask, DateTime.Now - timerState.StartTime);
                 }
-
-                if (runningTask == null)
-                {
-                    var today = DateTime.Now;
-                    var taskName = $"その他 ({today:MM/dd})";
-                    var existingTask = inProgressTasks.FirstOrDefault(t => t.Name == taskName);
-
-                    if (existingTask != null)
-                    {
-                        existingTask.Memo += $"\n{today:HH:mm} - {duration:hh\\:mm} の作業";
-                        existingTask.AddElapsedTime(duration);
-                    }
-                    else
-                    {
-                        var newTask = new TaskItem(taskName, $"{today:HH:mm} - {duration:hh\\:mm} の作業", TimeSpan.FromHours(24));
-                        newTask.AddElapsedTime(duration);
-                        inProgressTasks.Add(newTask);
-                    }
-                }
-                else
-                {
-                    runningTask.AddElapsedTime(duration);
-                }
-
-                baseElapsedTime = (runningTask ?? otherTask).ElapsedTime;
-                logger.LogTaskStop(runningTask ?? otherTask, duration);
-                lastTickTime = null;
-                runningTask = null;
                 SaveTasks();
-
-                StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
-                StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
             }
         }
 
@@ -248,7 +244,7 @@ namespace TaskManager
 
             timer.Tick += (s, e) =>
             {
-                if (isRunning && runningTask == task)
+                if (timerState.IsRunning && timerState.ActiveTask == task)
                 {
                     builder.Show();
                     timer.Stop();
@@ -350,25 +346,14 @@ namespace TaskManager
 
         private void Timer_Tick(object? sender, EventArgs e)
         {
-            var now = DateTime.Now;
-            var currentTask = GetSelectedTask();
-            TimeSpan currentElapsed = now - startTime;
+            var selectedTask = GetSelectedTask();
+            UpdateDisplayTime(timerState.GetDisplayTime(selectedTask));
+        }
 
-            if (currentTask == runningTask)
-            {
-                // 選択中のタスクが実行中のタスクと同じ場合は時間を加算
-                TimeSpan totalElapsed = baseElapsedTime + currentElapsed;
-                StopwatchDisplay.Text = totalElapsed.ToString(@"hh\:mm\:ss");
-                StopwatchMilliseconds.Text = $".{(totalElapsed.Milliseconds / 100)}";
-            }
-            else
-            {
-                // 別のタスクを表示中の場合は、そのタスクの経過時間をそのまま表示
-                StopwatchDisplay.Text = currentTask?.ElapsedTime.ToString(@"hh\:mm\:ss") ?? "00:00:00";
-                StopwatchMilliseconds.Text = $".{(currentTask?.ElapsedTime.Milliseconds ?? 0) / 100}";
-            }
-            
-            lastTickTime = now;
+        private void UpdateDisplayTime(TimeSpan time = default)
+        {
+            StopwatchDisplay.Text = time.ToString(@"hh\:mm\:ss");
+            StopwatchMilliseconds.Text = $".{(time.Milliseconds / 100)}";
         }
 
         private void UpdateTimerControls()
@@ -376,31 +361,23 @@ namespace TaskManager
             var selectedTask = GetSelectedTask();
             bool canStart = selectedTask == null || selectedTask.Status == TaskStatus.InProgress;
             
-            if (selectedTask == runningTask && isRunning)
+            if (selectedTask == timerState.ActiveTask && timerState.IsRunning)
             {
-                // 実行中のタスクが選択されている場合は停止ボタンを表示
                 StartStopButton.Content = "停止";
                 StartStopButton.Style = FindResource("DangerButton") as Style;
             }
-            else if (selectedTask != runningTask && isRunning)
-            {
-                // 別のタスクを表示中で、タイマーが動いている場合は開始ボタンを表示
-                StartStopButton.Content = "開始";
-                StartStopButton.Style = FindResource("SuccessButton") as Style;
-            }
             else
             {
-                // タイマーが停止している場合は開始ボタンを表示
                 StartStopButton.Content = "開始";
                 StartStopButton.Style = FindResource("SuccessButton") as Style;
             }
             
-            StartStopButton.IsEnabled = !isRunning || canStart;
+            StartStopButton.IsEnabled = !timerState.IsRunning || canStart;
         }
 
         private void StartStopButton_Click(object sender, RoutedEventArgs e)
         {
-            if (isRunning)
+            if (timerState.IsRunning)
             {
                 StopTimer();
             }
@@ -449,54 +426,8 @@ namespace TaskManager
                 }
             }
 
-            if (isRunning)
-            {
-                var currentTask = GetSelectedTask();
-                if (currentTask != runningTask)
-                {
-                    if (lastTaskSwitchTime == null)
-                    {
-                        lastTaskSwitchTime = DateTime.Now;
-                        previousRunningTask = runningTask;
-                        lastRunningTask = runningTask;
-                        lastTaskElapsed = DateTime.Now - startTime;
-                    }
-                    else
-                    {
-                        var timeSinceSwitch = DateTime.Now - lastTaskSwitchTime.Value;
-                        if (timeSinceSwitch > taskSwitchGracePeriod)
-                        {
-                            StopTimer();
-                            lastTaskSwitchTime = null;
-                            previousRunningTask = null;
-                            lastRunningTask = null;
-                            lastTaskElapsed = TimeSpan.Zero;
-                        }
-                        else if (currentTask == previousRunningTask)
-                        {
-                            lastTaskSwitchTime = null;
-                            previousRunningTask = null;
-                            // 元のタスクに戻った場合、以前のタイマー状態を復元
-                            isRunning = true;
-                            timer.Start();
-                        }
-                    }
-                }
-            }
-
             var selectedTask = GetSelectedTask();
-            if (selectedTask != null)
-            {
-                baseElapsedTime = selectedTask.ElapsedTime;
-            }
-            else
-            {
-                baseElapsedTime = TimeSpan.Zero;
-            }
-
-            StopwatchDisplay.Text = baseElapsedTime.ToString(@"hh\:mm\:ss");
-            StopwatchMilliseconds.Text = $".{(baseElapsedTime.Milliseconds / 100)}";
-
+            UpdateDisplayTime(timerState.GetDisplayTime(selectedTask));
             UpdateCurrentTaskDisplay();
             UpdateTimerControls();
         }
@@ -591,7 +522,7 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
-                if (isRunning && GetSelectedTask() == task)
+                if (timerState.IsRunning && GetSelectedTask() == task)
                 {
                     StopTimer();
                 }
@@ -618,7 +549,7 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
-                if (isRunning && GetSelectedTask() == task)
+                if (timerState.IsRunning && GetSelectedTask() == task)
                 {
                     StopTimer();
                 }
@@ -662,7 +593,7 @@ namespace TaskManager
 
         private void AddTask_Click(object sender, RoutedEventArgs e)
         {
-            if (isRunning)
+            if (timerState.IsRunning)
             {
                 StopTimer();
             }
@@ -697,7 +628,7 @@ namespace TaskManager
         private void Window_Closing(object sender, CancelEventArgs e)
         {
             // タイマーが動いていれば停止
-            if (isRunning)
+            if (timerState.IsRunning)
             {
                 StopTimer();
             }
