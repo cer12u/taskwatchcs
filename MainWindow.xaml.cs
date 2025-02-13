@@ -686,21 +686,36 @@ namespace TaskManager
 
         private void Window_Closing(object sender, CancelEventArgs e)
         {
+            // タイマーが動いていれば停止
             if (isRunning)
             {
                 StopTimer();
             }
 
-            // 終了時に通知を全てクリア
-            ToastNotificationManagerCompat.History.Clear();
-            if (currentNotificationId != null)
+            // アプリケーションの通知を全てクリア
+            try
             {
-                ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                currentNotificationId = null;
+                // 全ての通知を削除
+                ToastNotificationManagerCompat.History.Clear();
+                if (currentNotificationId != null)
+                {
+                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                    currentNotificationId = null;
+                }
+
+                // アプリケーションと関連付けられた通知も完全にクリア
+                ToastNotificationManagerCompat.Uninstall();
+            }
+            catch (Exception ex)
+            {
+                logger.LogTrace($"通知のクリア中にエラーが発生: {ex.Message}");
             }
 
+            // 各種タイマーを停止
             resetCheckTimer.Stop();
             inactiveCheckTimer.Stop();
+
+            // タスク状態を保存
             SaveTasks();
             CheckAndArchiveTasks();
         }
