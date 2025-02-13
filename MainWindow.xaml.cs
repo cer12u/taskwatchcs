@@ -38,7 +38,6 @@ namespace TaskManager
             public DateTime StartTime { get; private set; }
             public TaskItem? ActiveTask { get; private set; }
             public bool IsRunning { get; private set; }
-            public TimeSpan CurrentElapsed { get; private set; }
 
             public TimerState()
             {
@@ -47,10 +46,9 @@ namespace TaskManager
 
             public void Start(TaskItem? task)
             {
-                ActiveTask = task;
                 StartTime = DateTime.Now;
+                ActiveTask = task;
                 IsRunning = true;
-                CurrentElapsed = task?.ElapsedTime ?? TimeSpan.Zero;
             }
 
             public void Stop()
@@ -69,7 +67,6 @@ namespace TaskManager
                 StartTime = DateTime.Now;
                 ActiveTask = null;
                 IsRunning = false;
-                CurrentElapsed = TimeSpan.Zero;
             }
 
             public TimeSpan GetDisplayTime(TaskItem? selectedTask)
@@ -81,7 +78,7 @@ namespace TaskManager
 
                 if (selectedTask == ActiveTask)
                 {
-                    return CurrentElapsed + (DateTime.Now - StartTime);
+                    return (selectedTask?.ElapsedTime ?? TimeSpan.Zero) + (DateTime.Now - StartTime);
                 }
 
                 return selectedTask?.ElapsedTime ?? TimeSpan.Zero;
@@ -171,6 +168,20 @@ namespace TaskManager
                 return;
             }
 
+            // 既に実行中のタスクがあれば停止して保存
+            if (timerState.IsRunning && timerState.ActiveTask != selectedTask)
+            {
+                var currentTask = timerState.ActiveTask;
+                var elapsed = DateTime.Now - timerState.StartTime;
+                if (currentTask != null)
+                {
+                    currentTask.AddElapsedTime(elapsed);
+                    currentTask.IsProcessing = false;
+                    SaveTasks();
+                }
+            }
+
+            // 新しいタスクを開始
             timerState.Start(selectedTask);
             timer.Start();
 
