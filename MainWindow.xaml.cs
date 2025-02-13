@@ -212,13 +212,11 @@ namespace TaskManager
             if (currentNotificationId != null)
             {
                 ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                currentNotificationId = null;
             }
 
             var notificationId = Guid.NewGuid().ToString();
             currentNotificationId = notificationId;
-
-            // 30分後の通知をスケジュール
-            var scheduledTime = DateTime.Now.AddMinutes(30);
 
             // 基本の通知
             var builder = new ToastContentBuilder()
@@ -232,11 +230,26 @@ namespace TaskManager
                 builder.AddText($"予定時間を{(task.ElapsedTime - task.EstimatedTime).TotalMinutes:0}分超過しています。");
             }
 
-            builder.Schedule(scheduledTime, toast =>
+            // 通知を即時表示ではなくタイマーで管理
+            var timer = new DispatcherTimer
             {
-                toast.Tag = notificationId;
-                toast.Group = "TaskManager";
-            });
+                Interval = TimeSpan.FromMinutes(30)
+            };
+
+            timer.Tick += (s, e) =>
+            {
+                if (isRunning && runningTask == task)
+                {
+                    builder.Show();
+                    timer.Stop();
+                }
+                else
+                {
+                    timer.Stop();
+                }
+            };
+
+            timer.Start();
         }
 
         private void InactiveCheckTimer_Tick(object? sender, EventArgs e)
@@ -677,6 +690,15 @@ namespace TaskManager
             {
                 StopTimer();
             }
+
+            // 終了時に通知を全てクリア
+            ToastNotificationManagerCompat.History.Clear();
+            if (currentNotificationId != null)
+            {
+                ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                currentNotificationId = null;
+            }
+
             resetCheckTimer.Stop();
             inactiveCheckTimer.Stop();
             SaveTasks();
