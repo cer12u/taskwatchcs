@@ -132,7 +132,6 @@ namespace TaskManager
             lastTickTime = startTime;
             timer.Start();
             isRunning = true;
-            UpdateTimerControls();
             runningTask = selectedTask;
 
             // 前のタスクの情報をクリア
@@ -144,10 +143,10 @@ namespace TaskManager
             if (selectedTask != null)
             {
                 selectedTask.IsProcessing = true;
-                // 30分後の通知をスケジュール
                 ScheduleNotification(selectedTask);
             }
 
+            UpdateTimerControls();
             logger.LogTaskStart(selectedTask ?? otherTask);
         }
 
@@ -354,10 +353,25 @@ namespace TaskManager
             var selectedTask = GetSelectedTask();
             bool canStart = selectedTask == null || selectedTask.Status == TaskStatus.InProgress;
             
-            StartStopButton.Content = isRunning ? "停止" : "開始";
-            StartStopButton.Style = isRunning ? 
-                FindResource("DangerButton") as Style : 
-                FindResource("SuccessButton") as Style;
+            if (selectedTask == runningTask && isRunning)
+            {
+                // 実行中のタスクが選択されている場合は停止ボタンを表示
+                StartStopButton.Content = "停止";
+                StartStopButton.Style = FindResource("DangerButton") as Style;
+            }
+            else if (selectedTask != runningTask && isRunning)
+            {
+                // 別のタスクを表示中で、タイマーが動いている場合は開始ボタンを表示
+                StartStopButton.Content = "開始";
+                StartStopButton.Style = FindResource("SuccessButton") as Style;
+            }
+            else
+            {
+                // タイマーが停止している場合は開始ボタンを表示
+                StartStopButton.Content = "開始";
+                StartStopButton.Style = FindResource("SuccessButton") as Style;
+            }
+            
             StartStopButton.IsEnabled = !isRunning || canStart;
         }
 
@@ -423,9 +437,6 @@ namespace TaskManager
                         previousRunningTask = runningTask;
                         lastRunningTask = runningTask;
                         lastTaskElapsed = DateTime.Now - startTime;
-                        // ボタンを開始状態に変更
-                        isRunning = false;
-                        UpdateTimerControls();
                     }
                     else
                     {
@@ -442,9 +453,9 @@ namespace TaskManager
                         {
                             lastTaskSwitchTime = null;
                             previousRunningTask = null;
-                            // 元のタスクに戻った場合は実行中状態に戻す
+                            // 元のタスクに戻った場合、以前のタイマー状態を復元
                             isRunning = true;
-                            UpdateTimerControls();
+                            timer.Start();
                         }
                     }
                 }
