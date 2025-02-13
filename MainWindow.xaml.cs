@@ -48,6 +48,16 @@ namespace TaskManager
             logger = new TaskLogger();
             otherTask = new TaskItem("その他", "選択されていないときの作業時間", TimeSpan.FromHours(24));
 
+            // アプリケーション起動時に通知を初期化
+            try
+            {
+                ToastNotificationManagerCompat.History.Clear();
+            }
+            catch (Exception ex)
+            {
+                logger.LogTrace($"通知の初期化中にエラーが発生: {ex.Message}");
+            }
+
             InitializeStopwatch();
             InitializeResetTimer();
             InitializeInactiveCheckTimer();
