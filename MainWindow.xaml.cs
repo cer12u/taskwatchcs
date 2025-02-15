@@ -548,7 +548,7 @@ namespace TaskManager
                         break;
                 }
 
-                task.Complete();
+                task.SetCompleted(); // Changed from Complete() to SetCompleted()
                 completedTasks.Add(task);
                 logger.LogTaskComplete(task);
                 SaveTasks();

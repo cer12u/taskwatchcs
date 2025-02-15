@@ -46,7 +46,7 @@ namespace TaskManager
         /// <param name="duration">作業時間</param>
         public void LogTaskStop(TaskItem task, TimeSpan duration)
         {
-            LogActivity($"タスク停止: {task.Name}, 経過時間: {duration:hh\\:mm\\:ss\\.fff}");
+            LogActivity($"タスク停止: {task.Name}, 経過時間: {FormatTimeSpan(duration)}");
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace TaskManager
         /// <param name="task">完了したタスク</param>
         public void LogTaskComplete(TaskItem task)
         {
-            LogActivity($"タスク完了: {task.Name}, 合計時間: {task.ElapsedTime:hh\\:mm\\:ss\\.fff}");
+            LogActivity($"タスク完了: {task.Name}, 合計時間: {FormatTimeSpan(task.ElapsedTime)}");
         }
 
         /// <summary>
@@ -112,6 +112,39 @@ namespace TaskManager
         public void LogValidation(string context, bool isValid, string message)
         {
             LogTrace($"入力検証 [{context}] - {(isValid ? "成功" : "失敗")}: {message}");
+        }
+
+        public void LogTaskError(string operation, TaskItem? task, Exception? ex = null)
+        {
+            var taskName = task?.Name ?? "不明なタスク";
+            var errorMessage = ex?.Message ?? "詳細不明";
+            LogActivity($"タスク操作エラー - 操作: {operation}, タスク: {taskName}, エラー: {errorMessage}", true);
+        }
+
+        public void LogTaskStateChange(TaskItem task, TaskStatus oldState, TaskStatus newState)
+        {
+            LogActivity($"タスク状態変更: {task.Name}, {oldState} → {newState}");
+        }
+
+        public void LogTimerAction(string action, TaskItem? task)
+        {
+            var taskName = task?.Name ?? "その他の作業";
+            LogActivity($"タイマー {action}: {taskName}");
+        }
+
+        public void LogTaskOperation(string operation, TaskItem task, string details = "")
+        {
+            var logMessage = $"タスク {operation}: {task.Name}";
+            if (!string.IsNullOrEmpty(details))
+            {
+                logMessage += $", {details}";
+            }
+            LogActivity(logMessage);
+        }
+
+        private string FormatTimeSpan(TimeSpan time)
+        {
+            return time.ToString(@"hh\:mm\:ss\.fff");
         }
     }
 }

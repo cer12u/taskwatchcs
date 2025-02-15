@@ -5,6 +5,21 @@ using System.Text.Json.Serialization;
 
 namespace TaskManager
 {
+    public class TaskValidationResult
+    {
+        public bool IsValid { get; }
+        public string Message { get; }
+
+        public TaskValidationResult(bool isValid, string message = "")
+        {
+            IsValid = isValid;
+            Message = message;
+        }
+
+        public static TaskValidationResult Success() => new(true);
+        public static TaskValidationResult Error(string message) => new(false, message);
+    }
+
     /// <summary>
     /// タスクのステータスを表す列挙型
     /// </summary>
@@ -34,6 +49,7 @@ namespace TaskManager
         private string name = string.Empty;
         private string memo = string.Empty;
         private TimeSpan elapsedTime;
+        private TimeSpan estimatedTime;
         private TaskStatus status;
         private TaskPriority priority = TaskPriority.Medium;
         private bool isProcessing;
@@ -62,6 +78,11 @@ namespace TaskManager
             get => name;
             set
             {
+                var validation = ValidateName(value);
+                if (!validation.IsValid)
+                {
+                    throw new ArgumentException(validation.Message);
+                }
                 name = value;
                 OnPropertyChanged();
             }
@@ -75,6 +96,11 @@ namespace TaskManager
             get => memo;
             set
             {
+                var validation = ValidateMemo(value);
+                if (!validation.IsValid)
+                {
+                    throw new ArgumentException(validation.Message);
+                }
                 memo = value;
                 OnPropertyChanged();
             }
@@ -83,7 +109,20 @@ namespace TaskManager
         /// <summary>
         /// タスクの予定時間
         /// </summary>
-        public TimeSpan EstimatedTime { get; set; }
+        public TimeSpan EstimatedTime
+        {
+            get => estimatedTime;
+            set
+            {
+                var validation = ValidateEstimatedTime(value);
+                if (!validation.IsValid)
+                {
+                    throw new ArgumentException(validation.Message);
+                }
+                estimatedTime = value;
+                OnPropertyChanged();
+            }
+        }
 
         /// <summary>
         /// タスクの経過時間
@@ -93,6 +132,11 @@ namespace TaskManager
             get => elapsedTime;
             set
             {
+                var validation = ValidateElapsedTime(value);
+                if (!validation.IsValid)
+                {
+                    throw new ArgumentException(validation.Message);
+                }
                 elapsedTime = value;
                 OnPropertyChanged();
             }
@@ -188,6 +232,25 @@ namespace TaskManager
         public TaskItem(string name, string memo, TimeSpan estimatedTime)
         {
             Id = GenerateTimeBasedUuid();
+            
+            var nameValidation = ValidateName(name);
+            if (!nameValidation.IsValid)
+            {
+                throw new ArgumentException(nameValidation.Message, nameof(name));
+            }
+
+            var memoValidation = ValidateMemo(memo);
+            if (!memoValidation.IsValid)
+            {
+                throw new ArgumentException(memoValidation.Message, nameof(memo));
+            }
+
+            var estimatedTimeValidation = ValidateEstimatedTime(estimatedTime);
+            if (!estimatedTimeValidation.IsValid)
+            {
+                throw new ArgumentException(estimatedTimeValidation.Message, nameof(estimatedTime));
+            }
+
             Name = name;
             Memo = memo;
             EstimatedTime = estimatedTime;
@@ -199,9 +262,9 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// タスクを完了状態にする
+        /// タスクの状態を完了に変更
         /// </summary>
-        public void Complete()
+        public void SetCompleted()
         {
             Status = TaskStatus.Completed;
             CompletedAt = DateTime.Now;
@@ -209,7 +272,7 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// タスクを保留状態にする
+        /// タスクの状態を保留に変更
         /// </summary>
         public void SetPending()
         {
@@ -218,7 +281,7 @@ namespace TaskManager
         }
 
         /// <summary>
-        /// タスクを進行中状態にする
+        /// タスクの状態を進行中に変更
         /// </summary>
         public void SetInProgress()
         {
@@ -252,6 +315,79 @@ namespace TaskManager
         public bool IsInactive(TimeSpan duration)
         {
             return DateTime.Now - LastWorkedAt > duration;
+        }
+
+        private TaskValidationResult ValidateName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return TaskValidationResult.Error("タスク名を入力してください。");
+            }
+            if (value.Length > 100)
+            {
+                return TaskValidationResult.Error("タスク名は100文字以内で入力してください。");
+            }
+            return TaskValidationResult.Success();
+        }
+
+        private TaskValidationResult ValidateMemo(string? value)
+        {
+            if (value?.Length > 1000)
+            {
+                return TaskValidationResult.Error("メモは1000文字以内で入力してください。");
+            }
+            return TaskValidationResult.Success();
+        }
+
+        private TaskValidationResult ValidateEstimatedTime(TimeSpan value)
+        {
+            if (value < TimeSpan.Zero)
+            {
+                return TaskValidationResult.Error("予定時間は0以上の値を入力してください。");
+            }
+            if (value > TimeSpan.FromHours(24))
+            {
+                return TaskValidationResult.Error("予定時間は24時間以内で入力してください。");
+            }
+            return TaskValidationResult.Success();
+        }
+
+        private TaskValidationResult ValidateElapsedTime(TimeSpan value)
+        {
+            if (value < TimeSpan.Zero)
+            {
+                return TaskValidationResult.Error("経過時間は0以上の値を入力してください。");
+            }
+            return TaskValidationResult.Success();
+        }
+
+        public TaskValidationResult Validate()
+        {
+            var nameValidation = ValidateName(Name);
+            if (!nameValidation.IsValid)
+            {
+                return nameValidation;
+            }
+
+            var memoValidation = ValidateMemo(Memo);
+            if (!memoValidation.IsValid)
+            {
+                return memoValidation;
+            }
+
+            var estimatedTimeValidation = ValidateEstimatedTime(EstimatedTime);
+            if (!estimatedTimeValidation.IsValid)
+            {
+                return estimatedTimeValidation;
+            }
+
+            var elapsedTimeValidation = ValidateElapsedTime(ElapsedTime);
+            if (!elapsedTimeValidation.IsValid)
+            {
+                return elapsedTimeValidation;
+            }
+
+            return TaskValidationResult.Success();
         }
     }
 }
