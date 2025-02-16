@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 
 namespace TaskManager
@@ -30,111 +31,173 @@ namespace TaskManager
         private readonly ObservableCollection<TaskItem> pendingTasks;
         private readonly ObservableCollection<TaskItem> completedTasks;
         private readonly TaskLogger logger;
+        private readonly string dataDirectory;
 
         public TaskManagerService(
             ObservableCollection<TaskItem> inProgressTasks,
             ObservableCollection<TaskItem> pendingTasks,
             ObservableCollection<TaskItem> completedTasks,
-            TaskLogger logger)
+            TaskLogger logger,
+            string dataDirectory = "data")
         {
             this.inProgressTasks = inProgressTasks;
             this.pendingTasks = pendingTasks;
             this.completedTasks = completedTasks;
             this.logger = logger;
+            this.dataDirectory = dataDirectory;
+            EnsureDataDirectoryExists();
+        }
+
+        private void EnsureDataDirectoryExists()
+        {
+            try
+            {
+                if (!Directory.Exists(dataDirectory))
+                {
+                    Directory.CreateDirectory(dataDirectory);
+                    logger.LogInfo($"データディレクトリを作成しました: {dataDirectory}");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("データディレクトリの作成に失敗しました", ex);
+                throw new TaskManagerException("データディレクトリの作成に失敗しました", ex);
+            }
+        }
+
+        public TaskManagerResult ExecuteOperation(string operation, Func<TaskManagerResult> action)
+        {
+            try
+            {
+                logger.LogInfo($"操作開始: {operation}");
+                var result = action();
+                if (!result.Success)
+                {
+                    logger.LogWarning($"操作失敗: {operation}, 理由: {result.Message}");
+                }
+                return result;
+            }
+            catch (TaskManagerException ex)
+            {
+                // 既知の業務例外
+                logger.LogError($"業務例外が発生: {operation}", ex);
+                return TaskManagerResult.Failed(ex.Message, ex);
+            }
+            catch (Exception ex)
+            {
+                // 予期せぬシステム例外
+                logger.LogError($"システム例外が発生: {operation}", ex);
+                return TaskManagerResult.Failed("予期せぬエラーが発生しました。詳細はログを確認してください。", ex);
+            }
         }
 
         public TaskManagerResult RemoveTaskFromCurrentCollection(TaskItem task)
         {
-            try
+            return ExecuteOperation("タスクの削除", () =>
             {
-                if (task == null)
+                try
                 {
-                    return TaskManagerResult.Failed("タスクが指定されていません");
-                }
+                    if (task == null)
+                    {
+                        return TaskManagerResult.Failed("タスクが指定されていません");
+                    }
 
-                bool removed = false;
-                switch (task.Status)
+                    bool removed = false;
+                    switch (task.Status)
+                    {
+                        case TaskStatus.InProgress:
+                            removed = inProgressTasks.Remove(task);
+                            break;
+                        case TaskStatus.Pending:
+                            removed = pendingTasks.Remove(task);
+                            break;
+                        case TaskStatus.Completed:
+                            removed = completedTasks.Remove(task);
+                            break;
+                    }
+
+                    return removed 
+                        ? TaskManagerResult.Succeeded("タスクが正常に削除されました")
+                        : TaskManagerResult.Failed("タスクが見つかりませんでした");
+                }
+                catch (Exception ex)
                 {
-                    case TaskStatus.InProgress:
-                        removed = inProgressTasks.Remove(task);
-                        break;
-                    case TaskStatus.Pending:
-                        removed = pendingTasks.Remove(task);
-                        break;
-                    case TaskStatus.Completed:
-                        removed = completedTasks.Remove(task);
-                        break;
+                    logger.LogTrace($"タスク削除中にエラーが発生しました: {ex.Message}");
+                    throw new TaskManagerException("タスクの削除中にエラーが発生しました", ex);
                 }
-
-                return removed 
-                    ? TaskManagerResult.Succeeded("タスクが正常に削除されました")
-                    : TaskManagerResult.Failed("タスクが見つかりませんでした");
-            }
-            catch (Exception ex)
-            {
-                logger.LogTrace($"タスク削除中にエラーが発生しました: {ex.Message}");
-                return TaskManagerResult.Failed("タスクの削除中にエラーが発生しました", ex);
-            }
+            });
         }
 
         public TaskManagerResult MoveTaskToState(TaskItem task, TaskStatus newStatus)
         {
-            try
+            return ExecuteOperation("タスクの状態変更", () =>
             {
-                if (task == null)
+                try
                 {
-                    return TaskManagerResult.Failed("タスクが指定されていません");
-                }
+                    if (task == null)
+                    {
+                        return TaskManagerResult.Failed("タスクが指定されていません");
+                    }
 
-                var removeResult = RemoveTaskFromCurrentCollection(task);
-                if (!removeResult.Success)
+                    var removeResult = RemoveTaskFromCurrentCollection(task);
+                    if (!removeResult.Success)
+                    {
+                        return removeResult;
+                    }
+
+                    var oldStatus = task.Status;
+                    switch (newStatus)
+                    {
+                        case TaskStatus.InProgress:
+                            task.SetInProgress();
+                            inProgressTasks.Add(task);
+                            break;
+                        case TaskStatus.Pending:
+                            task.SetPending();
+                            pendingTasks.Add(task);
+                            break;
+                        case TaskStatus.Completed:
+                            task.SetCompleted();
+                            completedTasks.Add(task);
+                            logger.LogTaskComplete(task);
+                            break;
+                    }
+
+                    logger.LogTaskStateChange(task, oldStatus, newStatus);
+                    var saveResult = SaveTasks();
+                    return saveResult.Success 
+                        ? TaskManagerResult.Succeeded("タスクの状態が正常に更新されました")
+                        : TaskManagerResult.Failed($"タスクの保存に失敗しました: {saveResult.Message}");
+                }
+                catch (Exception ex)
                 {
-                    return removeResult;
+                    logger.LogTrace($"タスク状態の変更中にエラーが発生しました: {ex.Message}");
+                    throw new TaskManagerException("タスクの状態変更中にエラーが発生しました", ex);
                 }
-
-                var oldStatus = task.Status;
-                switch (newStatus)
-                {
-                    case TaskStatus.InProgress:
-                        task.SetInProgress();
-                        inProgressTasks.Add(task);
-                        break;
-                    case TaskStatus.Pending:
-                        task.SetPending();
-                        pendingTasks.Add(task);
-                        break;
-                    case TaskStatus.Completed:
-                        task.SetCompleted();
-                        completedTasks.Add(task);
-                        logger.LogTaskComplete(task);
-                        break;
-                }
-
-                logger.LogTaskStateChange(task, oldStatus, newStatus);
-                var saveResult = SaveTasks();
-                return saveResult.Success 
-                    ? TaskManagerResult.Succeeded("タスクの状態が正常に更新されました")
-                    : TaskManagerResult.Failed($"タスクの保存に失敗しました: {saveResult.Message}");
-            }
-            catch (Exception ex)
-            {
-                logger.LogTrace($"タスク状態の変更中にエラーが発生しました: {ex.Message}");
-                return TaskManagerResult.Failed("タスクの状態変更中にエラーが発生しました", ex);
-            }
+            });
         }
 
         public TaskManagerResult SaveTasks()
         {
-            try
+            return ExecuteOperation("タスクの保存", () =>
             {
-                // Note: この実装はMainWindowから移動する必要があります
-                return TaskManagerResult.Succeeded("タスクが正常に保存されました");
-            }
-            catch (Exception ex)
-            {
-                logger.LogTrace($"タスクの保存中にエラーが発生しました: {ex.Message}");
-                return TaskManagerResult.Failed("タスクの保存中にエラーが発生しました", ex);
-            }
+                try
+                {
+                    // 実際の保存処理をここに実装
+                    return TaskManagerResult.Succeeded("タスクが正常に保存されました");
+                }
+                catch (Exception ex)
+                {
+                    throw new TaskManagerException("タスクの保存中にエラーが発生しました", ex);
+                }
+            });
         }
+    }
+
+    public class TaskManagerException : Exception
+    {
+        public TaskManagerException(string message) : base(message) { }
+        public TaskManagerException(string message, Exception innerException) 
+            : base(message, innerException) { }
     }
 }

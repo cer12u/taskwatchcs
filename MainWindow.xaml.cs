@@ -31,6 +31,7 @@ namespace TaskManager
         private readonly TaskItem otherTask;
         private string? currentNotificationId = null;
         private readonly TimerState timerState = new();
+        private TaskManagerService taskManager { get; }
 
         // タイマー状態管理
         private class TimerState
@@ -89,33 +90,62 @@ namespace TaskManager
         {
             InitializeComponent();
             logger = new TaskLogger();
-            otherTask = new TaskItem("その他", "選択されていないときの作業時間", TimeSpan.FromHours(24));
+            otherTask = new TaskItem("その他の作業", "", TimeSpan.Zero, TaskPriority.Medium);
+            taskManager = new TaskManagerService(
+                inProgressTasks,
+                pendingTasks,
+                completedTasks,
+                logger
+            );
 
-            // アプリケーション起動時に通知を初期化
             try
             {
-                ToastNotificationManagerCompat.History.Clear();
+                InitializeApplication();
             }
             catch (Exception ex)
             {
-                logger.LogTrace($"通知の初期化中にエラーが発生: {ex.Message}");
+                logger.LogError("アプリケーションの初期化中にエラーが発生しました", ex);
+                ShowErrorMessage("アプリケーションの起動に失敗しました", ex);
+                Application.Current.Shutdown();
             }
+        }
 
+        private void InitializeApplication()
+        {
             InitializeStopwatch();
             InitializeResetTimer();
             InitializeInactiveCheckTimer();
             InitializeTasks();
             LoadTasks();
-            CheckAndArchiveTasks();
-            CheckInactiveTasks();
+        }
 
-            InProgressList.PreviewMouseDown += ListBox_PreviewMouseDown;
-            PendingList.PreviewMouseDown += ListBox_PreviewMouseDown;
-            CompletedList.PreviewMouseDown += ListBox_PreviewMouseDown;
+        private void SafeExecute(string operation, Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (TaskManagerException ex)
+            {
+                logger.LogError($"操作失敗: {operation}", ex);
+                ShowErrorMessage(ex.Message, ex);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"予期せぬエラー: {operation}", ex);
+                ShowErrorMessage("予期せぬエラーが発生しました", ex);
+            }
+        }
 
-            InProgressList.PreviewKeyDown += ListBox_PreviewKeyDown;
-            PendingList.PreviewKeyDown += ListBox_PreviewKeyDown;
-            CompletedList.PreviewKeyDown += ListBox_PreviewKeyDown;
+        private void ShowErrorMessage(string message, Exception? ex = null)
+        {
+            var details = ex != null ? $"\n\n詳細: {ex.Message}" : "";
+            MessageBox.Show(
+                $"{message}{details}",
+                "エラー",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
+            );
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -445,53 +475,56 @@ namespace TaskManager
 
         private void EditTask_Click(object sender, EventArgs e)
         {
-            TaskItem? selectedTask = null;
-
-            if (e is MouseButtonEventArgs && sender is ListBox listBox)
+            SafeExecute("タスク編集", () =>
             {
-                selectedTask = listBox.SelectedItem as TaskItem;
-            }
-            else if (sender is FrameworkElement element)
-            {
-                selectedTask = element.DataContext as TaskItem;
-            }
+                TaskItem? selectedTask = null;
 
-            if (selectedTask != null)
-            {
-                logger.LogTrace($"タスク編集開始: {selectedTask.Name}");
-                logger.LogTrace($"編集前の値: EstimatedTime={selectedTask.EstimatedTime}, ElapsedTime={selectedTask.ElapsedTime}, Priority={selectedTask.Priority}");
-
-                var dialog = new TaskEditDialog(
-                    selectedTask.Name,
-                    selectedTask.Memo ?? "",
-                    selectedTask.EstimatedTime,
-                    selectedTask.ElapsedTime,
-                    selectedTask.Priority)
+                if (e is MouseButtonEventArgs && sender is ListBox listBox)
                 {
-                    Owner = this
-                };
-
-                if (dialog.ShowDialog() == true && dialog.TaskName != null)
-                {
-                    logger.LogTrace($"タスク編集の保存: {dialog.TaskName}");
-                    logger.LogTrace($"変更後の値: EstimatedTime={dialog.EstimatedTime}, ElapsedTime={dialog.ElapsedTime}, Priority={dialog.Priority}");
-
-                    selectedTask.Name = dialog.TaskName;
-                    selectedTask.Memo = dialog.Memo ?? "";
-                    selectedTask.EstimatedTime = dialog.EstimatedTime;
-                    selectedTask.ElapsedTime = dialog.ElapsedTime;
-                    selectedTask.Priority = dialog.Priority;
-                    SaveTasks();
-
-                    InProgressList.Items.Refresh();
-                    PendingList.Items.Refresh();
-                    CompletedList.Items.Refresh();
+                    selectedTask = listBox.SelectedItem as TaskItem;
                 }
-                else
+                else if (sender is FrameworkElement element)
                 {
-                    logger.LogTrace("タスク編集がキャンセルされました");
+                    selectedTask = element.DataContext as TaskItem;
                 }
-            }
+
+                if (selectedTask != null)
+                {
+                    logger.LogTrace($"タスク編集開始: {selectedTask.Name}");
+                    logger.LogTrace($"編集前の値: EstimatedTime={selectedTask.EstimatedTime}, ElapsedTime={selectedTask.ElapsedTime}, Priority={selectedTask.Priority}");
+
+                    var dialog = new TaskEditDialog(
+                        selectedTask.Name,
+                        selectedTask.Memo ?? "",
+                        selectedTask.EstimatedTime,
+                        selectedTask.ElapsedTime,
+                        selectedTask.Priority)
+                    {
+                        Owner = this
+                    };
+
+                    if (dialog.ShowDialog() == true && dialog.TaskName != null)
+                    {
+                        logger.LogTrace($"タスク編集の保存: {dialog.TaskName}");
+                        logger.LogTrace($"変更後の値: EstimatedTime={dialog.EstimatedTime}, ElapsedTime={dialog.ElapsedTime}, Priority={dialog.Priority}");
+
+                        selectedTask.Name = dialog.TaskName;
+                        selectedTask.Memo = dialog.Memo ?? "";
+                        selectedTask.EstimatedTime = dialog.EstimatedTime;
+                        selectedTask.ElapsedTime = dialog.ElapsedTime;
+                        selectedTask.Priority = dialog.Priority;
+                        SaveTasks();
+
+                        InProgressList.Items.Refresh();
+                        PendingList.Items.Refresh();
+                        CompletedList.Items.Refresh();
+                    }
+                    else
+                    {
+                        logger.LogTrace("タスク編集がキャンセルされました");
+                    }
+                }
+            });
         }
 
         private TaskItem? GetSelectedTask()
@@ -638,38 +671,40 @@ namespace TaskManager
 
         private void Window_Closing(object sender, CancelEventArgs e)
         {
-            // タイマーが動いていれば停止
-            if (timerState.IsRunning)
+            SafeExecute("アプリケーション終了処理", () =>
             {
-                StopTimer();
-            }
-
-            // アプリケーションの通知を全てクリア
-            try
-            {
-                // 全ての通知を削除
-                ToastNotificationManagerCompat.History.Clear();
-                if (currentNotificationId != null)
+                try
                 {
-                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                    currentNotificationId = null;
+                    // 通知をクリア
+                    ToastNotificationManagerCompat.History.Clear();
+                    if (currentNotificationId != null)
+                    {
+                        ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                        currentNotificationId = null;
+                    }
+
+                    // アプリケーションと関連付けられた通知も完全にクリア
+                    ToastNotificationManagerCompat.Uninstall();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("通知のクリア中にエラーが発生", ex);
                 }
 
-                // アプリケーションと関連付けられた通知も完全にクリア
-                ToastNotificationManagerCompat.Uninstall();
-            }
-            catch (Exception ex)
-            {
-                logger.LogTrace($"通知のクリア中にエラーが発生: {ex.Message}");
-            }
+                // 各種タイマーを停止
+                resetCheckTimer.Stop();
+                inactiveCheckTimer.Stop();
 
-            // 各種タイマーを停止
-            resetCheckTimer.Stop();
-            inactiveCheckTimer.Stop();
-
-            // タスク状態を保存
-            SaveTasks();
-            CheckAndArchiveTasks();
+                // タスク状態を保存
+                var result = taskManager.SaveTasks();
+                if (!result.Success)
+                {
+                    logger.LogError("タスクの保存に失敗", result.Exception);
+                    ShowErrorMessage("タスクの保存に失敗しました", result.Exception);
+                }
+                
+                CheckAndArchiveTasks();
+            });
         }
 
         private void SaveTasks_Click(object sender, RoutedEventArgs e)

@@ -229,7 +229,8 @@ namespace TaskManager
         /// <param name="name">タスク名</param>
         /// <param name="memo">メモ</param>
         /// <param name="estimatedTime">予定時間</param>
-        public TaskItem(string name, string memo, TimeSpan estimatedTime)
+        /// <param name="priority">優先度</param>
+        public TaskItem(string name, string memo = "", TimeSpan estimatedTime = default, TaskPriority priority = TaskPriority.Medium)
         {
             Id = GenerateTimeBasedUuid();
             
@@ -256,7 +257,7 @@ namespace TaskManager
             EstimatedTime = estimatedTime;
             ElapsedTime = TimeSpan.Zero;
             Status = TaskStatus.InProgress;
-            Priority = TaskPriority.Medium;  // デフォルトの優先度を設定
+            Priority = priority;
             CreatedAt = DateTime.Now;
             LastWorkedAt = CreatedAt;
         }

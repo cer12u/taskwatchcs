@@ -4,6 +4,14 @@ using System.Text;
 
 namespace TaskManager
 {
+    public enum LogLevel
+    {
+        Trace,
+        Info,
+        Warning,
+        Error
+    }
+
     /// <summary>
     /// タスクの作業ログを管理するクラス。
     /// 日付ごとにログファイルを作成し、タスクの開始、停止、完了を記録します。
@@ -12,6 +20,7 @@ namespace TaskManager
     {
         private readonly string logFile;
         private static readonly object lockObj = new object();
+        private readonly string logDirectory;
 
         /// <summary>
         /// TaskLoggerのコンストラクタ
@@ -19,15 +28,29 @@ namespace TaskManager
         /// <param name="logDirectory">ログファイルを保存するディレクトリ</param>
         public TaskLogger(string logDirectory = "logs")
         {
-            // ログディレクトリが存在しない場合は作成
-            if (!Directory.Exists(logDirectory))
+            this.logDirectory = logDirectory;
+            try
             {
-                Directory.CreateDirectory(logDirectory);
-            }
+                // ログディレクトリが存在しない場合は作成
+                if (!Directory.Exists(logDirectory))
+                {
+                    Directory.CreateDirectory(logDirectory);
+                }
 
-            // 日付ごとのログファイル名を生成
-            string timestamp = DateTime.Now.ToString("yyyyMMdd");
-            logFile = Path.Combine(logDirectory, $"tasklog_{timestamp}.txt");
+                // 日付ごとのログファイル名を生成
+                string timestamp = DateTime.Now.ToString("yyyyMMdd");
+                logFile = Path.Combine(logDirectory, $"tasklog_{timestamp}.txt");
+            }
+            catch (Exception ex)
+            {
+                // 致命的なエラーの場合はデスクトップにフォールバック
+                string fallbackPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                    "taskmanager_error.log"
+                );
+                logFile = fallbackPath;
+                LogError("Logger initialization failed", ex);
+            }
         }
 
         /// <summary>
@@ -72,13 +95,13 @@ namespace TaskManager
         /// スレッドセーフな実装のためlockを使用
         /// </summary>
         /// <param name="message">記録するメッセージ</param>
-        private void LogActivity(string message, bool isTrace = false)
+        public void LogActivity(string message, LogLevel level = LogLevel.Info)
         {
             try
             {
                 lock (lockObj)
                 {
-                    var prefix = isTrace ? "[TRACE]" : "[INFO]";
+                    var prefix = GetLogLevelPrefix(level);
                     string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {prefix} - {message}";
                     File.AppendAllText(logFile, logEntry + Environment.NewLine, Encoding.UTF8);
                     System.Diagnostics.Debug.WriteLine(logEntry);
@@ -86,16 +109,45 @@ namespace TaskManager
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ログ書き込みエラー: {ex.Message}");
+                // ログ書き込みに失敗した場合、フォールバックとしてデバッグ出力を使用
+                System.Diagnostics.Debug.WriteLine($"Failed to write log: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Original message: {message}");
             }
         }
+
+        private string GetLogLevelPrefix(LogLevel level) => level switch
+        {
+            LogLevel.Trace => "[TRACE]",
+            LogLevel.Info => "[INFO]",
+            LogLevel.Warning => "[WARN]",
+            LogLevel.Error => "[ERROR]",
+            _ => "[INFO]"
+        };
 
         /// <summary>
         /// デバッグ用のトレースログを記録
         /// </summary>
-        public void LogTrace(string message)
+        public void LogTrace(string message) => LogActivity(message, LogLevel.Trace);
+
+        /// <summary>
+        /// 情報ログを記録
+        /// </summary>
+        public void LogInfo(string message) => LogActivity(message, LogLevel.Info);
+
+        /// <summary>
+        /// 警告ログを記録
+        /// </summary>
+        public void LogWarning(string message) => LogActivity(message, LogLevel.Warning);
+
+        /// <summary>
+        /// エラーログを記録
+        /// </summary>
+        public void LogError(string message, Exception? ex = null)
         {
-            LogActivity(message, true);
+            var errorMessage = ex != null
+                ? $"{message}\nException: {ex.GetType().Name}\nMessage: {ex.Message}\nStack Trace: {ex.StackTrace}"
+                : message;
+            LogActivity(errorMessage, LogLevel.Error);
         }
 
         /// <summary>
@@ -117,8 +169,8 @@ namespace TaskManager
         public void LogTaskError(string operation, TaskItem? task, Exception? ex = null)
         {
             var taskName = task?.Name ?? "不明なタスク";
-            var errorMessage = ex?.Message ?? "詳細不明";
-            LogActivity($"タスク操作エラー - 操作: {operation}, タスク: {taskName}, エラー: {errorMessage}", true);
+            var errorMessage = $"タスク操作エラー - 操作: {operation}, タスク: {taskName}";
+            LogError(errorMessage, ex);
         }
 
         public void LogTaskStateChange(TaskItem task, TaskStatus oldState, TaskStatus newState)
@@ -140,6 +192,15 @@ namespace TaskManager
                 logMessage += $", {details}";
             }
             LogActivity(logMessage);
+        }
+
+        public void LogExceptionWithContext(string context, Exception ex)
+        {
+            var errorMessage = $"コンテキスト: {context}\n" +
+                             $"例外タイプ: {ex.GetType().Name}\n" +
+                             $"メッセージ: {ex.Message}\n" +
+                             $"スタックトレース: {ex.StackTrace}";
+            LogError(errorMessage);
         }
 
         private string FormatTimeSpan(TimeSpan time)
