@@ -89,7 +89,7 @@ namespace TaskManager
         {
             InitializeComponent();
             logger = new TaskLogger();
-            otherTask = new TaskItem("その他の作業", "", TimeSpan.Zero, TaskPriority.Medium);
+            otherTask = new TaskItem("その他", "", TimeSpan.Zero, TaskPriority.Medium);
             taskManager = new TaskManagerService(
                 inProgressTasks,
                 pendingTasks,
@@ -202,12 +202,20 @@ namespace TaskManager
             {
                 var currentTask = timerState.ActiveTask;
                 var elapsed = DateTime.Now - timerState.StartTime;
+                
+                // 実行中のタスクの時間を記録
                 if (currentTask != null)
                 {
                     currentTask.AddElapsedTime(elapsed);
                     currentTask.IsProcessing = false;
-                    SaveTasks();
+                    logger.LogTaskStop(currentTask, elapsed);
                 }
+                else
+                {
+                    // その他タスクとして記録
+                    logger.LogOtherActivity(elapsed);
+                }
+                SaveTasks();
             }
 
             // 新しいタスクを開始
@@ -218,10 +226,14 @@ namespace TaskManager
             {
                 selectedTask.IsProcessing = true;
                 ScheduleNotification(selectedTask);
+                logger.LogTaskStart(selectedTask);
+            }
+            else
+            {
+                logger.LogTaskStart(otherTask);
             }
 
             UpdateTimerControls();
-            logger.LogTaskStart(selectedTask ?? otherTask);
         }
 
         private void StopTimer()
@@ -238,16 +250,34 @@ namespace TaskManager
                 }
 
                 var runningTask = timerState.ActiveTask;
+                var elapsed = DateTime.Now - timerState.StartTime;
                 timerState.Stop();
+
+                // タスク未選択（その他）の場合の処理
+                if (runningTask == null)
+                {
+                    var otherTaskName = $"その他 ({DateTime.Now:MM/dd})";
+                    var existingOtherTask = inProgressTasks.FirstOrDefault(t => t.Name == otherTaskName);
+
+                    if (existingOtherTask == null)
+                    {
+                        // その他タスクが存在しない場合は新規作成
+                        existingOtherTask = new TaskItem(otherTaskName, "自動作成", TimeSpan.Zero);
+                        inProgressTasks.Add(existingOtherTask);
+                    }
+
+                    existingOtherTask.AddElapsedTime(elapsed);
+                    logger.LogOtherActivity(elapsed);
+                }
+                else
+                {
+                    logger.LogTaskStop(runningTask, elapsed);
+                }
 
                 var selectedTask = GetSelectedTask();
                 UpdateDisplayTime(selectedTask?.ElapsedTime ?? TimeSpan.Zero);
                 UpdateTimerControls();
                 
-                if (runningTask != null)
-                {
-                    logger.LogTaskStop(runningTask, DateTime.Now - timerState.StartTime);
-                }
                 SaveTasks();
             }
         }

@@ -87,7 +87,7 @@ namespace TaskManager
         /// <param name="duration">作業時間</param>
         public void LogOtherActivity(TimeSpan duration)
         {
-            LogActivity($"その他の作業: {duration:hh\\:mm\\:ss\\.fff}");
+            LogActivity($"その他: {duration:hh\\:mm\\:ss\\.fff}");
         }
 
         /// <summary>
