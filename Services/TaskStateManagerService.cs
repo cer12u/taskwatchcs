@@ -43,6 +43,7 @@ namespace TaskManager.Services
         private bool _disposed;
 
         private readonly ConcurrentDictionary<TaskStatus, ObservableCollection<TaskItem>> _taskCollections;
+        private readonly TaskStateTransition _stateTransition;
 
         public event EventHandler<TaskStateChangedEventArgs>? TaskStateChanged;
 
@@ -65,6 +66,8 @@ namespace TaskManager.Services
             _taskCollections[TaskStatus.InProgress] = inProgressTasks;
             _taskCollections[TaskStatus.Pending] = pendingTasks;
             _taskCollections[TaskStatus.Completed] = completedTasks;
+
+            _stateTransition = new TaskStateTransition();
         }
 
         public ReadOnlyObservableCollection<TaskItem> InProgressTasks => readOnlyInProgressTasks;
@@ -100,6 +103,11 @@ namespace TaskManager.Services
                 if (oldStatus == newStatus)
                 {
                     return TaskManagerResult.Succeeded(ErrorMessages["TaskAlreadyInState"]);
+                }
+
+                if (!_stateTransition.IsTransitionAllowed(oldStatus, newStatus))
+                {
+                    return TaskManagerResult.Failed(_stateTransition.GetTransitionErrorMessage(oldStatus, newStatus));
                 }
 
                 var currentCollection = GetCollectionForStatus(oldStatus);
