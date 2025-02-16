@@ -26,7 +26,6 @@ namespace TaskManager
         private readonly ObservableCollection<TaskItem> inProgressTasks = new();
         private readonly ObservableCollection<TaskItem> pendingTasks = new();
         private readonly ObservableCollection<TaskItem> completedTasks = new();
-        private readonly string taskSaveFile = "tasks.json";
         private readonly TaskLogger logger;
         private readonly TaskItem otherTask;
         private string? currentNotificationId = null;
@@ -709,81 +708,48 @@ namespace TaskManager
 
         private void SaveTasks_Click(object sender, RoutedEventArgs e)
         {
-            SaveTasks();
-            MessageBox.Show("タスクを保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            var result = taskManager.SaveTasks();
+            if (result.Success)
+            {
+                MessageBox.Show("タスクを保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                ShowErrorMessage($"タスクの保存中にエラーが発生しました。\n{result.Message}", result.Exception);
+            }
         }
 
         private void LoadTasks_Click(object sender, RoutedEventArgs e)
         {
-            LoadTasks();
-            MessageBox.Show("タスクを読み込みました。", "読み込み完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            var result = taskManager.LoadTasks();
+            if (result.Success)
+            {
+                MessageBox.Show("タスクを読み込みました。", "読み込み完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                ShowErrorMessage($"タスクの読み込み中にエラーが発生しました。\n{result.Message}", result.Exception);
+            }
         }
 
         private void SaveTasks()
         {
-            try
+            var result = taskManager.SaveTasks();
+            if (!result.Success)
             {
-                var allTasks = new
-                {
-                    InProgress = inProgressTasks,
-                    Pending = pendingTasks,
-                    Completed = completedTasks
-                };
-
-                var json = JsonSerializer.Serialize(allTasks);
-                File.WriteAllText(taskSaveFile, json);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"タスクの保存中にエラーが発生しました。\n{ex.Message}", 
-                              "エラー", 
-                              MessageBoxButton.OK, 
-                              MessageBoxImage.Error);
+                logger.LogError("タスクの保存中にエラーが発生しました", result.Exception);
+                ShowErrorMessage($"タスクの保存中にエラーが発生しました。\n{result.Message}", result.Exception);
             }
         }
 
         private void LoadTasks()
         {
-            try
+            var result = taskManager.LoadTasks();
+            if (!result.Success)
             {
-                if (File.Exists(taskSaveFile))
-                {
-                    var json = File.ReadAllText(taskSaveFile);
-                    var data = JsonSerializer.Deserialize<TaskData>(json);
-                    if (data != null)
-                    {
-                        inProgressTasks.Clear();
-                        pendingTasks.Clear();
-                        completedTasks.Clear();
-
-                        if (data.InProgress != null)
-                            foreach (var task in data.InProgress)
-                                inProgressTasks.Add(task);
-
-                        if (data.Pending != null)
-                            foreach (var task in data.Pending)
-                                pendingTasks.Add(task);
-
-                        if (data.Completed != null)
-                            foreach (var task in data.Completed)
-                                completedTasks.Add(task);
-                    }
-                }
+                logger.LogError("タスクの読み込み中にエラーが発生しました", result.Exception);
+                ShowErrorMessage($"タスクの読み込み中にエラーが発生しました。\n{result.Message}", result.Exception);
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"タスクの読み込み中にエラーが発生しました。\n{ex.Message}", 
-                              "エラー", 
-                              MessageBoxButton.OK, 
-                              MessageBoxImage.Error);
-            }
-        }
-
-        private class TaskData
-        {
-            public TaskItem[]? InProgress { get; set; }
-            public TaskItem[]? Pending { get; set; }
-            public TaskItem[]? Completed { get; set; }
         }
     }
 }

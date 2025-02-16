@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 
 namespace TaskManager
@@ -183,14 +184,75 @@ namespace TaskManager
             {
                 try
                 {
-                    // 実際の保存処理をここに実装
+                    var allTasks = new
+                    {
+                        InProgress = inProgressTasks,
+                        Pending = pendingTasks,
+                        Completed = completedTasks
+                    };
+
+                    var path = Path.Combine(dataDirectory, "tasks.json");
+                    var json = JsonSerializer.Serialize(allTasks);
+                    File.WriteAllText(path, json);
+                    logger.LogInfo("タスクが正常に保存されました");
                     return TaskManagerResult.Succeeded("タスクが正常に保存されました");
                 }
                 catch (Exception ex)
                 {
+                    logger.LogError("タスクの保存中にエラーが発生しました", ex);
                     throw new TaskManagerException("タスクの保存中にエラーが発生しました", ex);
                 }
             });
+        }
+
+        public TaskManagerResult LoadTasks()
+        {
+            return ExecuteOperation("タスクの読み込み", () =>
+            {
+                try
+                {
+                    var path = Path.Combine(dataDirectory, "tasks.json");
+                    if (File.Exists(path))
+                    {
+                        var json = File.ReadAllText(path);
+                        var data = JsonSerializer.Deserialize<TaskData>(json);
+                        if (data != null)
+                        {
+                            inProgressTasks.Clear();
+                            pendingTasks.Clear();
+                            completedTasks.Clear();
+
+                            if (data.InProgress != null)
+                                foreach (var task in data.InProgress)
+                                    inProgressTasks.Add(task);
+
+                            if (data.Pending != null)
+                                foreach (var task in data.Pending)
+                                    pendingTasks.Add(task);
+
+                            if (data.Completed != null)
+                                foreach (var task in data.Completed)
+                                    completedTasks.Add(task);
+
+                            logger.LogInfo("タスクが正常に読み込まれました");
+                            return TaskManagerResult.Succeeded("タスクが正常に読み込まれました");
+                        }
+                    }
+                    return TaskManagerResult.Succeeded("タスクファイルが存在しないため、新規作成します");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("タスクの読み込み中にエラーが発生しました", ex);
+                    throw new TaskManagerException("タスクの読み込み中にエラーが発生しました", ex);
+                }
+            });
+        }
+
+        private class TaskData
+        {
+            public TaskItem[]? InProgress { get; set; }
+            public TaskItem[]? Pending { get; set; }
+            public TaskItem[]? Completed { get; set; }
         }
     }
 
