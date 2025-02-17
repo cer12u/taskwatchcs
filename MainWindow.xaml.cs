@@ -26,6 +26,7 @@ namespace TaskManager
         private readonly TaskLogger logger;
         private TaskManagerService taskManager { get; }
         private readonly TimerService timerService;
+        private readonly TaskService taskService;
 
         public MainWindow()
         {
@@ -38,6 +39,7 @@ namespace TaskManager
                 logger
             );
             timerService = new TimerService(logger);
+            taskService = new TaskService(inProgressTasks, pendingTasks, completedTasks, logger);
             timerService.TimerTick += TimerService_TimerTick;
             timerService.TimerStateChanged += TimerService_TimerStateChanged;
 
@@ -304,19 +306,7 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
-                switch (task.Status)
-                {
-                    case TaskStatus.InProgress:
-                        inProgressTasks.Remove(task);
-                        break;
-                    case TaskStatus.Pending:
-                        pendingTasks.Remove(task);
-                        break;
-                    case TaskStatus.Completed:
-                        completedTasks.Remove(task);
-                        break;
-                }
-                SaveTasks();
+                taskService.DeleteTask(task);
             }
         }
 
@@ -329,20 +319,7 @@ namespace TaskManager
                     timerService.Stop(inProgressTasks);
                 }
 
-                switch (task.Status)
-                {
-                    case TaskStatus.InProgress:
-                        inProgressTasks.Remove(task);
-                        break;
-                    case TaskStatus.Pending:
-                        pendingTasks.Remove(task);
-                        break;
-                }
-
-                task.SetCompleted();
-                completedTasks.Add(task);
-                logger.LogTaskComplete(task);
-                SaveTasks();
+                taskService.CompleteTask(task);
                 UpdateTimerControls();
             }
         }
@@ -356,11 +333,7 @@ namespace TaskManager
                     timerService.Stop(inProgressTasks);
                 }
 
-                inProgressTasks.Remove(task);
-                task.SetPending();
-                pendingTasks.Add(task);
-                logger.LogTaskStop(task, TimeSpan.Zero);
-                SaveTasks();
+                taskService.SetPendingTask(task);
                 UpdateTimerControls();
             }
         }
@@ -369,19 +342,7 @@ namespace TaskManager
         {
             if (sender is FrameworkElement element && element.DataContext is TaskItem task)
             {
-                switch (task.Status)
-                {
-                    case TaskStatus.Pending:
-                        pendingTasks.Remove(task);
-                        break;
-                    case TaskStatus.Completed:
-                        completedTasks.Remove(task);
-                        break;
-                }
-
-                task.SetInProgress();
-                inProgressTasks.Add(task);
-                SaveTasks();
+                taskService.SetInProgressTask(task);
                 UpdateTimerControls();
             }
         }
@@ -404,8 +365,7 @@ namespace TaskManager
 
             if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
             {
-                inProgressTasks.Add(inputWindow.CreatedTask);
-                SaveTasks();
+                taskService.AddTask(inputWindow.CreatedTask);
             }
         }
 

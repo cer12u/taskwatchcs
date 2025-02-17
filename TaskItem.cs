@@ -21,26 +21,6 @@ namespace TaskManager
     }
 
     /// <summary>
-    /// タスクのステータスを表す列挙型
-    /// </summary>
-    public enum TaskStatus
-    {
-        InProgress,  // 進行中
-        Pending,     // 保留中
-        Completed    // 完了
-    }
-
-    /// <summary>
-    /// タスクの優先度を表す列挙型
-    /// </summary>
-    public enum TaskPriority
-    {
-        Low,    // 低
-        Medium, // 中
-        High    // 高
-    }
-
-    /// <summary>
     /// タスクの情報を管理するクラス。
     /// INotifyPropertyChangedを実装し、UIへの自動更新を提供します。
     /// </summary>
