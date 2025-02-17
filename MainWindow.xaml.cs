@@ -326,7 +326,7 @@ namespace TaskManager
             {
                 if (timerService.IsRunning && GetSelectedTask() == task)
                 {
-                    timerService.Stop();
+                    timerService.Stop(inProgressTasks);
                 }
 
                 switch (task.Status)
@@ -339,7 +339,7 @@ namespace TaskManager
                         break;
                 }
 
-                task.SetCompleted(); // Changed from Complete() to SetCompleted()
+                task.SetCompleted();
                 completedTasks.Add(task);
                 logger.LogTaskComplete(task);
                 SaveTasks();
@@ -353,7 +353,7 @@ namespace TaskManager
             {
                 if (timerService.IsRunning && GetSelectedTask() == task)
                 {
-                    timerService.Stop();
+                    timerService.Stop(inProgressTasks);
                 }
 
                 inProgressTasks.Remove(task);
