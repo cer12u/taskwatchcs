@@ -27,6 +27,7 @@ namespace TaskManager
         private TaskManagerService taskManager { get; }
         private readonly TimerService timerService;
         private readonly TaskService taskService;
+        private readonly ArchiveService archiveService;
 
         public MainWindow()
         {
@@ -43,6 +44,10 @@ namespace TaskManager
                 inProgressTasks, 
                 pendingTasks, 
                 completedTasks, 
+                logger,
+                taskManager);
+            archiveService = new ArchiveService(
+                completedTasks,
                 logger,
                 taskManager);
             timerService.TimerTick += TimerService_TimerTick;
@@ -383,7 +388,7 @@ namespace TaskManager
 
             if (dialog.ShowDialog() == true)
             {
-                CheckAndArchiveTasks();
+                archiveService.CheckAndArchiveTasks();
             }
         }
 
@@ -424,7 +429,7 @@ namespace TaskManager
                     ShowErrorMessage("タスクの保存に失敗しました", result.Exception);
                 }
                 
-                CheckAndArchiveTasks();
+                archiveService.CheckAndArchiveTasks();
             });
         }
 
@@ -505,52 +510,8 @@ namespace TaskManager
 
         private void ResetCheckTimer_Tick(object? sender, EventArgs e)
         {
-            CheckAndArchiveTasks();
+            archiveService.CheckAndArchiveTasks();
             CheckInactiveTasks();
-        }
-
-        private void CheckAndArchiveTasks()
-        {
-            var settings = Settings.Instance;
-            if (settings.NeedsReset())
-            {
-                if (settings.AutoArchiveEnabled)
-                {
-                    ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
-                }
-                settings.UpdateLastResetTime();
-            }
-        }
-
-        private void ArchiveCompletedTasks(DateTime date)
-        {
-            try
-            {
-                var tasksToArchive = completedTasks
-                    .Where(t => t.CompletedAt?.Date <= date.Date)
-                    .ToList();
-
-                if (tasksToArchive.Any())
-                {
-                    var archiveFile = Settings.GetArchiveFilePath(date);
-                    var json = JsonSerializer.Serialize(tasksToArchive);
-                    File.WriteAllText(archiveFile, json);
-
-                    foreach (var task in tasksToArchive)
-                    {
-                        completedTasks.Remove(task);
-                    }
-
-                    SaveTasks();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"タスクのアーカイブ中にエラーが発生しました。\n{ex.Message}",
-                              "エラー",
-                              MessageBoxButton.OK,
-                              MessageBoxImage.Error);
-            }
         }
 
         private void InitializeTasks()
