@@ -43,7 +43,7 @@ namespace TaskManager.Services
             {
                 if (selectedTask != null && selectedTask.Status != TaskStatus.InProgress)
                 {
-                    throw new InvalidOperationException("進行中のタスクのみ時間を記録できます。");
+                    throw new TaskManagerException("進行中のタスクのみ時間を記録できます。");
                 }
 
                 // 既に実行中のタスクがあれば停止

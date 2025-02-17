@@ -115,8 +115,7 @@ namespace TaskManager.Services
             var result = taskManager.SaveTasks();
             if (!result.Success)
             {
-                logger.LogError("タスクの保存中にエラーが発生しました", result.Exception);
-                throw new InvalidOperationException("タスクの保存に失敗しました", result.Exception);
+                throw new TaskManagerException("タスクの保存に失敗しました", result.Exception);
             }
         }
     }

@@ -182,7 +182,7 @@ namespace TaskManager
 
         private void StartStopButton_Click(object sender, RoutedEventArgs e)
         {
-            try
+            exceptionHandler.SafeExecute("タイマー操作", () =>
             {
                 if (timerService.IsRunning)
                 {
@@ -193,11 +193,7 @@ namespace TaskManager
                 {
                     timerService.Start(GetSelectedTask());
                 }
-            }
-            catch (InvalidOperationException ex)
-            {
-                MessageBox.Show(ex.Message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            });
         }
 
         private void ListBox_MouseDown(object sender, MouseButtonEventArgs e)
