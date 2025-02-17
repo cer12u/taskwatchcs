@@ -11,27 +11,29 @@ namespace TaskManager.Services
         private readonly TaskLogger logger;
         private readonly TaskManagerService taskManager;
         private readonly ExceptionHandlingService exceptionHandler;
+        private readonly SettingsService settingsService;
         private static readonly TimeSpan InactiveDuration = TimeSpan.FromHours(72);
 
         public InactiveTaskService(
             ObservableCollection<TaskItem> inProgressTasks,
             ObservableCollection<TaskItem> pendingTasks,
             TaskLogger logger,
-            TaskManagerService taskManager)
+            TaskManagerService taskManager,
+            SettingsService settingsService)
         {
             this.inProgressTasks = inProgressTasks;
             this.pendingTasks = pendingTasks;
             this.logger = logger;
             this.taskManager = taskManager;
             this.exceptionHandler = new ExceptionHandlingService(logger);
+            this.settingsService = settingsService;
         }
 
         public void CheckInactiveTasks()
         {
             exceptionHandler.SafeExecute("非アクティブタスクのチェック", () =>
             {
-                var settings = Settings.Instance;
-                if (settings.InactiveTasksEnabled)
+                if (settingsService.InactiveTasksEnabled)
                 {
                     var inactiveTasks = inProgressTasks
                         .Where(task => task.IsInactive(InactiveDuration))

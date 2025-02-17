@@ -29,12 +29,14 @@ namespace TaskManager
         private readonly ArchiveService archiveService;
         private readonly InactiveTaskService inactiveTaskService;
         private readonly ExceptionHandlingService exceptionHandler;
+        private readonly SettingsService settingsService;
 
         public MainWindow()
         {
             InitializeComponent();
             logger = new TaskLogger();
             exceptionHandler = new ExceptionHandlingService(logger);
+            settingsService = new SettingsService(logger);
             taskManager = new TaskManagerService(
                 inProgressTasks,
                 pendingTasks,
@@ -51,12 +53,14 @@ namespace TaskManager
             archiveService = new ArchiveService(
                 completedTasks,
                 logger,
-                taskManager);
+                taskManager,
+                settingsService);
             inactiveTaskService = new InactiveTaskService(
                 inProgressTasks,
                 pendingTasks,
                 logger,
-                taskManager);
+                taskManager,
+                settingsService);
             timerService.TimerTick += TimerService_TimerTick;
             timerService.TimerStateChanged += TimerService_TimerStateChanged;
 
@@ -76,6 +80,7 @@ namespace TaskManager
 
         private void InitializeApplication()
         {
+            settingsService.LoadSettings();
             InitializeResetTimer();
             InitializeInactiveCheckTimer();
             InitializeTasks();
@@ -386,7 +391,7 @@ namespace TaskManager
 
         private void OpenSettings_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new SettingsDialog
+            var dialog = new SettingsDialog(settingsService)
             {
                 Owner = this
             };

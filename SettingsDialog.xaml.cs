@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using TaskManager.Services;
 
 namespace TaskManager
 {
@@ -8,15 +9,15 @@ namespace TaskManager
     /// </summary>
     public partial class SettingsDialog : Window
     {
-        private readonly Settings settings;
+        private readonly SettingsService settingsService;
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public SettingsDialog()
+        public SettingsDialog(SettingsService settingsService)
         {
             InitializeComponent();
-            settings = Settings.Instance;
+            this.settingsService = settingsService;
             InitializeTimeComboBoxes();
             InitializeNotificationSettings();
             LoadCurrentSettings();
@@ -72,17 +73,17 @@ namespace TaskManager
         private void LoadCurrentSettings()
         {
             // リセット時刻の設定
-            HoursComboBox.SelectedItem = settings.ResetTime.Hours;
-            MinutesComboBox.SelectedItem = settings.ResetTime.Minutes - (settings.ResetTime.Minutes % 5);
+            HoursComboBox.SelectedItem = settingsService.Settings.ResetTime.Hours;
+            MinutesComboBox.SelectedItem = settingsService.Settings.ResetTime.Minutes - (settingsService.Settings.ResetTime.Minutes % 5);
 
             // 通知設定
-            NotificationsEnabledCheckBox.IsChecked = settings.NotificationsEnabled;
-            NotificationIntervalComboBox.SelectedItem = settings.NotificationInterval;
-            EstimatedTimeNotificationCheckBox.IsChecked = settings.EstimatedTimeNotificationEnabled;
+            NotificationsEnabledCheckBox.IsChecked = settingsService.Settings.NotificationsEnabled;
+            NotificationIntervalComboBox.SelectedItem = settingsService.Settings.NotificationInterval;
+            EstimatedTimeNotificationCheckBox.IsChecked = settingsService.Settings.EstimatedTimeNotificationEnabled;
 
             // アーカイブ設定
-            AutoArchiveEnabledCheckBox.IsChecked = settings.AutoArchiveEnabled;
-            InactiveTasksEnabledCheckBox.IsChecked = settings.InactiveTasksEnabled;
+            AutoArchiveEnabledCheckBox.IsChecked = settingsService.Settings.AutoArchiveEnabled;
+            InactiveTasksEnabledCheckBox.IsChecked = settingsService.Settings.InactiveTasksEnabled;
 
             UpdateNotificationControlsState();
         }
@@ -114,22 +115,22 @@ namespace TaskManager
             var minutes = (int)MinutesComboBox.SelectedItem;
 
             // 設定を保存する前に、現在の設定を保持
-            var oldResetTime = settings.ResetTime;
-            var oldAutoArchive = settings.AutoArchiveEnabled;
-            var oldInactiveTasks = settings.InactiveTasksEnabled;
+            var oldResetTime = settingsService.Settings.ResetTime;
+            var oldAutoArchive = settingsService.Settings.AutoArchiveEnabled;
+            var oldInactiveTasks = settingsService.Settings.InactiveTasksEnabled;
 
             // 新しい設定を保存
-            settings.ResetTime = new TimeSpan(hours, minutes, 0);
-            settings.NotificationsEnabled = NotificationsEnabledCheckBox.IsChecked ?? false;
-            settings.NotificationInterval = (int)(NotificationIntervalComboBox.SelectedItem ?? 30);
-            settings.EstimatedTimeNotificationEnabled = EstimatedTimeNotificationCheckBox.IsChecked ?? false;
-            settings.AutoArchiveEnabled = AutoArchiveEnabledCheckBox.IsChecked ?? true;
-            settings.InactiveTasksEnabled = InactiveTasksEnabledCheckBox.IsChecked ?? true;
+            settingsService.Settings.ResetTime = new TimeSpan(hours, minutes, 0);
+            settingsService.Settings.NotificationsEnabled = NotificationsEnabledCheckBox.IsChecked ?? false;
+            settingsService.Settings.NotificationInterval = (int)(NotificationIntervalComboBox.SelectedItem ?? 30);
+            settingsService.Settings.EstimatedTimeNotificationEnabled = EstimatedTimeNotificationCheckBox.IsChecked ?? false;
+            settingsService.Settings.AutoArchiveEnabled = AutoArchiveEnabledCheckBox.IsChecked ?? true;
+            settingsService.Settings.InactiveTasksEnabled = InactiveTasksEnabledCheckBox.IsChecked ?? true;
 
             // 設定が変更された場合、確認メッセージを表示
-            if (oldResetTime != settings.ResetTime ||
-                oldAutoArchive != settings.AutoArchiveEnabled ||
-                oldInactiveTasks != settings.InactiveTasksEnabled)
+            if (oldResetTime != settingsService.Settings.ResetTime ||
+                oldAutoArchive != settingsService.Settings.AutoArchiveEnabled ||
+                oldInactiveTasks != settingsService.Settings.InactiveTasksEnabled)
             {
                 MessageBox.Show("設定を変更しました。次回のリセット時刻から新しい設定が適用されます。",
                               "設定変更",
@@ -137,7 +138,7 @@ namespace TaskManager
                               MessageBoxImage.Information);
             }
 
-            settings.Save();
+            settingsService.Save();
 
             DialogResult = true;
             Close();

@@ -70,55 +70,23 @@ namespace TaskManager
         {
             get
             {
-                instance ??= Load();
+                instance ??= new Settings();
                 return instance;
             }
         }
 
         /// <summary>
-        /// 設定をファイルから読み込み
+        /// 他の設定インスタンスから値をコピー
         /// </summary>
-        private static Settings Load()
+        public void LoadFrom(Settings other)
         {
-            try
-            {
-                if (File.Exists(SettingsFile))
-                {
-                    var json = File.ReadAllText(SettingsFile);
-                    var settings = JsonSerializer.Deserialize<Settings>(json);
-                    if (settings != null)
-                    {
-                        return settings;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"設定の読み込み中にエラーが発生しました。\n{ex.Message}",
-                              "エラー",
-                              MessageBoxButton.OK,
-                              MessageBoxImage.Error);
-            }
-            return new Settings();
-        }
-
-        /// <summary>
-        /// 設定をファイルに保存
-        /// </summary>
-        public void Save()
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(this);
-                File.WriteAllText(SettingsFile, json);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"設定の保存中にエラーが発生しました。\n{ex.Message}",
-                              "エラー",
-                              MessageBoxButton.OK,
-                              MessageBoxImage.Error);
-            }
+            ResetTime = other.ResetTime;
+            LastResetTime = other.LastResetTime;
+            NotificationsEnabled = other.NotificationsEnabled;
+            NotificationInterval = other.NotificationInterval;
+            EstimatedTimeNotificationEnabled = other.EstimatedTimeNotificationEnabled;
+            AutoArchiveEnabled = other.AutoArchiveEnabled;
+            InactiveTasksEnabled = other.InactiveTasksEnabled;
         }
 
         /// <summary>
@@ -155,7 +123,6 @@ namespace TaskManager
         public void UpdateLastResetTime()
         {
             LastResetTime = DateTime.Now;
-            Save();
         }
     }
 }

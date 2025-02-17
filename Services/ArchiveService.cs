@@ -12,30 +12,32 @@ namespace TaskManager.Services
         private readonly TaskLogger logger;
         private readonly TaskManagerService taskManager;
         private readonly ExceptionHandlingService exceptionHandler;
+        private readonly SettingsService settingsService;
 
         public ArchiveService(
             ObservableCollection<TaskItem> completedTasks,
             TaskLogger logger,
-            TaskManagerService taskManager)
+            TaskManagerService taskManager,
+            SettingsService settingsService)
         {
             this.completedTasks = completedTasks;
             this.logger = logger;
             this.taskManager = taskManager;
             this.exceptionHandler = new ExceptionHandlingService(logger);
+            this.settingsService = settingsService;
         }
 
         public void CheckAndArchiveTasks()
         {
             exceptionHandler.SafeExecute("アーカイブのチェック", () =>
             {
-                var settings = Settings.Instance;
-                if (settings.NeedsReset())
+                if (settingsService.NeedsReset())
                 {
-                    if (settings.AutoArchiveEnabled)
+                    if (settingsService.AutoArchiveEnabled)
                     {
                         ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
                     }
-                    settings.UpdateLastResetTime();
+                    settingsService.UpdateLastResetTime();
                 }
             });
         }
@@ -50,7 +52,7 @@ namespace TaskManager.Services
 
                 if (tasksToArchive.Any())
                 {
-                    var archiveFile = Settings.GetArchiveFilePath(date);
+                    var archiveFile = settingsService.GetArchiveFilePath(date);
                     var json = JsonSerializer.Serialize(tasksToArchive);
                     File.WriteAllText(archiveFile, json);
 

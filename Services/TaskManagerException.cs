@@ -8,7 +8,7 @@ namespace TaskManager.Services
         {
         }
 
-        public TaskManagerException(string message, Exception? innerException) : base(message, innerException)
+        public TaskManagerException(string message, Exception? innerException) : base(message, innerException ?? new Exception("Unknown error"))
         {
         }
     }
