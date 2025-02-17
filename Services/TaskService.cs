@@ -11,6 +11,7 @@ namespace TaskManager.Services
         private readonly ObservableCollection<TaskItem> completedTasks;
         private readonly TaskLogger logger;
         private readonly TaskManagerService taskManager;
+        private readonly ExceptionHandlingService exceptionHandler;
 
         public TaskService(
             ObservableCollection<TaskItem> inProgressTasks,
@@ -24,73 +25,89 @@ namespace TaskManager.Services
             this.completedTasks = completedTasks;
             this.logger = logger;
             this.taskManager = taskManager;
+            this.exceptionHandler = new ExceptionHandlingService(logger);
         }
 
         public void AddTask(TaskItem task)
         {
-            inProgressTasks.Add(task);
-            SaveTasks();
+            exceptionHandler.SafeExecute("タスクの追加", () =>
+            {
+                inProgressTasks.Add(task);
+                SaveTasks();
+            });
         }
 
         public void DeleteTask(TaskItem task)
         {
-            switch (task.Status)
+            exceptionHandler.SafeExecute("タスクの削除", () =>
             {
-                case TaskStatus.InProgress:
-                    inProgressTasks.Remove(task);
-                    break;
-                case TaskStatus.Pending:
-                    pendingTasks.Remove(task);
-                    break;
-                case TaskStatus.Completed:
-                    completedTasks.Remove(task);
-                    break;
-            }
-            SaveTasks();
+                switch (task.Status)
+                {
+                    case TaskStatus.InProgress:
+                        inProgressTasks.Remove(task);
+                        break;
+                    case TaskStatus.Pending:
+                        pendingTasks.Remove(task);
+                        break;
+                    case TaskStatus.Completed:
+                        completedTasks.Remove(task);
+                        break;
+                }
+                SaveTasks();
+            });
         }
 
         public void CompleteTask(TaskItem task)
         {
-            switch (task.Status)
+            exceptionHandler.SafeExecute("タスクの完了", () =>
             {
-                case TaskStatus.InProgress:
-                    inProgressTasks.Remove(task);
-                    break;
-                case TaskStatus.Pending:
-                    pendingTasks.Remove(task);
-                    break;
-            }
+                switch (task.Status)
+                {
+                    case TaskStatus.InProgress:
+                        inProgressTasks.Remove(task);
+                        break;
+                    case TaskStatus.Pending:
+                        pendingTasks.Remove(task);
+                        break;
+                }
 
-            task.SetCompleted();
-            completedTasks.Add(task);
-            logger.LogTaskComplete(task);
-            SaveTasks();
+                task.SetCompleted();
+                completedTasks.Add(task);
+                logger.LogTaskComplete(task);
+                SaveTasks();
+            });
         }
 
         public void SetPendingTask(TaskItem task)
         {
-            inProgressTasks.Remove(task);
-            task.SetPending();
-            pendingTasks.Add(task);
-            logger.LogTaskStop(task, TimeSpan.Zero);
-            SaveTasks();
+            exceptionHandler.SafeExecute("タスクの保留", () =>
+            {
+                inProgressTasks.Remove(task);
+                task.SetPending();
+                pendingTasks.Add(task);
+                logger.LogTaskStop(task, TimeSpan.Zero);
+                SaveTasks();
+            });
         }
 
         public void SetInProgressTask(TaskItem task)
         {
-            switch (task.Status)
+            exceptionHandler.SafeExecute("タスクの進行中設定", () =>
             {
-                case TaskStatus.Pending:
-                    pendingTasks.Remove(task);
-                    break;
-                case TaskStatus.Completed:
-                    completedTasks.Remove(task);
-                    break;
-            }
+                switch (task.Status)
+                {
+                    case TaskStatus.Pending:
+                        pendingTasks.Remove(task);
+                        break;
+                    case TaskStatus.Completed:
+                        completedTasks.Remove(task);
+                        break;
+                }
 
-            task.SetInProgress();
-            inProgressTasks.Add(task);
-            SaveTasks();
+                task.SetInProgress();
+                inProgressTasks.Add(task);
+                SaveTasks();
+            });
         }
 
         private void SaveTasks()

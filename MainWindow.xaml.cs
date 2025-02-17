@@ -28,11 +28,13 @@ namespace TaskManager
         private readonly TaskService taskService;
         private readonly ArchiveService archiveService;
         private readonly InactiveTaskService inactiveTaskService;
+        private readonly ExceptionHandlingService exceptionHandler;
 
         public MainWindow()
         {
             InitializeComponent();
             logger = new TaskLogger();
+            exceptionHandler = new ExceptionHandlingService(logger);
             taskManager = new TaskManagerService(
                 inProgressTasks,
                 pendingTasks,
@@ -64,8 +66,10 @@ namespace TaskManager
             }
             catch (Exception ex)
             {
-                logger.LogError("アプリケーションの初期化中にエラーが発生しました", ex);
-                ShowErrorMessage("アプリケーションの起動に失敗しました", ex);
+                exceptionHandler.HandleException(
+                    "アプリケーションの初期化",
+                    ex,
+                    "アプリケーションの起動に失敗しました");
                 Application.Current.Shutdown();
             }
         }
@@ -250,7 +254,7 @@ namespace TaskManager
 
         private void EditTask_Click(object sender, EventArgs e)
         {
-            SafeExecute("タスク編集", () =>
+            exceptionHandler.SafeExecute("タスク編集", () =>
             {
                 TaskItem? selectedTask = null;
 
@@ -404,7 +408,7 @@ namespace TaskManager
 
         private void Window_Closing(object sender, CancelEventArgs e)
         {
-            SafeExecute("アプリケーション終了処理", () =>
+            exceptionHandler.SafeExecute("アプリケーション終了処理", () =>
             {
                 try
                 {
@@ -430,8 +434,7 @@ namespace TaskManager
                 var result = taskManager.SaveTasks();
                 if (!result.Success)
                 {
-                    logger.LogError("タスクの保存に失敗", result.Exception);
-                    ShowErrorMessage("タスクの保存に失敗しました", result.Exception);
+                    throw new TaskManagerException("タスクの保存に失敗しました", result.Exception);
                 }
                 
                 archiveService.CheckAndArchiveTasks();
@@ -447,7 +450,9 @@ namespace TaskManager
             }
             else
             {
-                ShowErrorMessage($"タスクの保存中にエラーが発生しました。\n{result.Message}", result.Exception);
+                exceptionHandler.HandleException(
+                    "タスクの保存",
+                    new TaskManagerException($"タスクの保存中にエラーが発生しました。\n{result.Message}", result.Exception));
             }
         }
 
@@ -460,7 +465,9 @@ namespace TaskManager
             }
             else
             {
-                ShowErrorMessage($"タスクの読み込み中にエラーが発生しました。\n{result.Message}", result.Exception);
+                exceptionHandler.HandleException(
+                    "タスクの読み込み",
+                    new TaskManagerException($"タスクの読み込み中にエラーが発生しました。\n{result.Message}", result.Exception));
             }
         }
 
@@ -469,8 +476,9 @@ namespace TaskManager
             var result = taskManager.SaveTasks();
             if (!result.Success)
             {
-                logger.LogError("タスクの保存中にエラーが発生しました", result.Exception);
-                ShowErrorMessage($"タスクの保存中にエラーが発生しました。\n{result.Message}", result.Exception);
+                exceptionHandler.HandleException(
+                    "タスクの保存",
+                    new TaskManagerException($"タスクの保存中にエラーが発生しました。\n{result.Message}", result.Exception));
             }
         }
 
@@ -479,8 +487,9 @@ namespace TaskManager
             var result = taskManager.LoadTasks();
             if (!result.Success)
             {
-                logger.LogError("タスクの読み込み中にエラーが発生しました", result.Exception);
-                ShowErrorMessage($"タスクの読み込み中にエラーが発生しました。\n{result.Message}", result.Exception);
+                exceptionHandler.HandleException(
+                    "タスクの読み込み",
+                    new TaskManagerException($"タスクの読み込み中にエラーが発生しました。\n{result.Message}", result.Exception));
             }
         }
 

@@ -11,6 +11,7 @@ namespace TaskManager.Services
         private readonly ObservableCollection<TaskItem> completedTasks;
         private readonly TaskLogger logger;
         private readonly TaskManagerService taskManager;
+        private readonly ExceptionHandlingService exceptionHandler;
 
         public ArchiveService(
             ObservableCollection<TaskItem> completedTasks,
@@ -20,24 +21,28 @@ namespace TaskManager.Services
             this.completedTasks = completedTasks;
             this.logger = logger;
             this.taskManager = taskManager;
+            this.exceptionHandler = new ExceptionHandlingService(logger);
         }
 
         public void CheckAndArchiveTasks()
         {
-            var settings = Settings.Instance;
-            if (settings.NeedsReset())
+            exceptionHandler.SafeExecute("アーカイブのチェック", () =>
             {
-                if (settings.AutoArchiveEnabled)
+                var settings = Settings.Instance;
+                if (settings.NeedsReset())
                 {
-                    ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
+                    if (settings.AutoArchiveEnabled)
+                    {
+                        ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
+                    }
+                    settings.UpdateLastResetTime();
                 }
-                settings.UpdateLastResetTime();
-            }
+            });
         }
 
         private void ArchiveCompletedTasks(DateTime date)
         {
-            try
+            exceptionHandler.SafeExecute("タスクのアーカイブ", () =>
             {
                 var tasksToArchive = completedTasks
                     .Where(t => t.CompletedAt?.Date <= date.Date)
@@ -56,12 +61,7 @@ namespace TaskManager.Services
 
                     SaveTasks();
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("タスクのアーカイブ中にエラーが発生しました", ex);
-                throw;
-            }
+            });
         }
 
         private void SaveTasks()
@@ -69,8 +69,7 @@ namespace TaskManager.Services
             var result = taskManager.SaveTasks();
             if (!result.Success)
             {
-                logger.LogError("タスクの保存中にエラーが発生しました", result.Exception);
-                throw new InvalidOperationException("タスクの保存に失敗しました", result.Exception);
+                throw new TaskManagerException("タスクの保存に失敗しました", result.Exception);
             }
         }
     }

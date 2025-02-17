@@ -12,6 +12,7 @@ namespace TaskManager.Services
         private readonly TimerState timerState = new();
         private readonly TaskLogger logger;
         private readonly TaskItem otherTask;
+        private readonly ExceptionHandlingService exceptionHandler;
         private string? currentNotificationId = null;
 
         public event EventHandler<TimeSpan>? TimerTick;
@@ -20,6 +21,7 @@ namespace TaskManager.Services
         public TimerService(TaskLogger logger)
         {
             this.logger = logger;
+            this.exceptionHandler = new ExceptionHandlingService(logger);
             otherTask = new TaskItem("その他", "", TimeSpan.Zero, TaskPriority.Medium);
             InitializeTimer();
         }
@@ -37,145 +39,157 @@ namespace TaskManager.Services
 
         public void Start(TaskItem? selectedTask)
         {
-            if (selectedTask != null && selectedTask.Status != TaskStatus.InProgress)
+            exceptionHandler.SafeExecute("タイマーの開始", () =>
             {
-                throw new InvalidOperationException("進行中のタスクのみ時間を記録できます。");
-            }
+                if (selectedTask != null && selectedTask.Status != TaskStatus.InProgress)
+                {
+                    throw new InvalidOperationException("進行中のタスクのみ時間を記録できます。");
+                }
 
-            // 既に実行中のタスクがあれば停止
-            if (timerState.IsRunning)
-            {
-                Stop();
-            }
+                // 既に実行中のタスクがあれば停止
+                if (timerState.IsRunning)
+                {
+                    Stop();
+                }
 
-            // 新しいタスクを開始
-            timerState.Start(selectedTask);
-            timer.Start();
+                // 新しいタスクを開始
+                timerState.Start(selectedTask);
+                timer.Start();
 
-            if (selectedTask != null)
-            {
-                selectedTask.IsProcessing = true;
-                ScheduleNotification(selectedTask);
-                logger.LogTaskStart(selectedTask);
-            }
-            else
-            {
-                logger.LogTaskStart(otherTask);
-            }
+                if (selectedTask != null)
+                {
+                    selectedTask.IsProcessing = true;
+                    ScheduleNotification(selectedTask);
+                    logger.LogTaskStart(selectedTask);
+                }
+                else
+                {
+                    logger.LogTaskStart(otherTask);
+                }
 
-            TimerStateChanged?.Invoke(this, EventArgs.Empty);
+                TimerStateChanged?.Invoke(this, EventArgs.Empty);
+            });
         }
 
         public void Stop()
         {
-            if (timerState.IsRunning)
+            exceptionHandler.SafeExecute("タイマーの停止", () =>
             {
-                timer.Stop();
-
-                if (currentNotificationId != null)
+                if (timerState.IsRunning)
                 {
-                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                    currentNotificationId = null;
-                }
+                    timer.Stop();
 
-                var runningTask = timerState.ActiveTask;
-                var elapsed = DateTime.Now - timerState.StartTime;
-                timerState.Stop();
+                    if (currentNotificationId != null)
+                    {
+                        ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                        currentNotificationId = null;
+                    }
 
-                if (runningTask == null)
-                {
-                    logger.LogOtherActivity(elapsed);
-                }
-                else
-                {
-                    logger.LogTaskStop(runningTask, elapsed);
-                }
+                    var runningTask = timerState.ActiveTask;
+                    var elapsed = DateTime.Now - timerState.StartTime;
+                    timerState.Stop();
 
-                TimerStateChanged?.Invoke(this, EventArgs.Empty);
-            }
+                    if (runningTask == null)
+                    {
+                        logger.LogOtherActivity(elapsed);
+                    }
+                    else
+                    {
+                        logger.LogTaskStop(runningTask, elapsed);
+                    }
+
+                    TimerStateChanged?.Invoke(this, EventArgs.Empty);
+                }
+            });
         }
 
         public void Stop(ObservableCollection<TaskItem> inProgressTasks)
         {
-            if (timerState.IsRunning)
+            exceptionHandler.SafeExecute("タイマーの停止", () =>
             {
-                timer.Stop();
+                if (timerState.IsRunning)
+                {
+                    timer.Stop();
 
+                    if (currentNotificationId != null)
+                    {
+                        ToastNotificationManagerCompat.History.Remove(currentNotificationId);
+                        currentNotificationId = null;
+                    }
+
+                    var runningTask = timerState.ActiveTask;
+                    var elapsed = DateTime.Now - timerState.StartTime;
+                    timerState.Stop();
+
+                    // タスク未選択（その他）の場合の処理
+                    if (runningTask == null)
+                    {
+                        var otherTaskName = $"その他 ({DateTime.Now:MM/dd})";
+                        var existingOtherTask = inProgressTasks.FirstOrDefault(t => t.Name == otherTaskName);
+
+                        if (existingOtherTask == null)
+                        {
+                            // その他タスクが存在しない場合は新規作成
+                            existingOtherTask = new TaskItem(otherTaskName, "自動作成", TimeSpan.Zero);
+                            inProgressTasks.Add(existingOtherTask);
+                        }
+
+                        existingOtherTask.AddElapsedTime(elapsed);
+                        logger.LogOtherActivity(elapsed);
+                    }
+                    else
+                    {
+                        logger.LogTaskStop(runningTask, elapsed);
+                    }
+
+                    TimerStateChanged?.Invoke(this, EventArgs.Empty);
+                }
+            });
+        }
+
+        private void ScheduleNotification(TaskItem task)
+        {
+            exceptionHandler.SafeExecute("通知のスケジュール", () =>
+            {
                 if (currentNotificationId != null)
                 {
                     ToastNotificationManagerCompat.History.Remove(currentNotificationId);
                     currentNotificationId = null;
                 }
 
-                var runningTask = timerState.ActiveTask;
-                var elapsed = DateTime.Now - timerState.StartTime;
-                timerState.Stop();
+                var notificationId = Guid.NewGuid().ToString();
+                currentNotificationId = notificationId;
 
-                // タスク未選択（その他）の場合の処理
-                if (runningTask == null)
+                var builder = new ToastContentBuilder()
+                    .AddText($"タスク: {task.Name}")
+                    .AddText("開始から30分が経過しました。")
+                    .SetToastScenario(ToastScenario.Default);
+
+                if (task.ElapsedTime > task.EstimatedTime)
                 {
-                    var otherTaskName = $"その他 ({DateTime.Now:MM/dd})";
-                    var existingOtherTask = inProgressTasks.FirstOrDefault(t => t.Name == otherTaskName);
+                    builder.AddText($"予定時間を{(task.ElapsedTime - task.EstimatedTime).TotalMinutes:0}分超過しています。");
+                }
 
-                    if (existingOtherTask == null)
+                var notificationTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMinutes(30)
+                };
+
+                notificationTimer.Tick += (s, e) =>
+                {
+                    if (timerState.IsRunning && timerState.ActiveTask == task)
                     {
-                        // その他タスクが存在しない場合は新規作成
-                        existingOtherTask = new TaskItem(otherTaskName, "自動作成", TimeSpan.Zero);
-                        inProgressTasks.Add(existingOtherTask);
+                        builder.Show();
+                        notificationTimer.Stop();
                     }
+                    else
+                    {
+                        notificationTimer.Stop();
+                    }
+                };
 
-                    existingOtherTask.AddElapsedTime(elapsed);
-                    logger.LogOtherActivity(elapsed);
-                }
-                else
-                {
-                    logger.LogTaskStop(runningTask, elapsed);
-                }
-
-                TimerStateChanged?.Invoke(this, EventArgs.Empty);
-            }
-        }
-
-        private void ScheduleNotification(TaskItem task)
-        {
-            if (currentNotificationId != null)
-            {
-                ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                currentNotificationId = null;
-            }
-
-            var notificationId = Guid.NewGuid().ToString();
-            currentNotificationId = notificationId;
-
-            var builder = new ToastContentBuilder()
-                .AddText($"タスク: {task.Name}")
-                .AddText("開始から30分が経過しました。")
-                .SetToastScenario(ToastScenario.Default);
-
-            if (task.ElapsedTime > task.EstimatedTime)
-            {
-                builder.AddText($"予定時間を{(task.ElapsedTime - task.EstimatedTime).TotalMinutes:0}分超過しています。");
-            }
-
-            var notificationTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMinutes(30)
-            };
-
-            notificationTimer.Tick += (s, e) =>
-            {
-                if (timerState.IsRunning && timerState.ActiveTask == task)
-                {
-                    builder.Show();
-                    notificationTimer.Stop();
-                }
-                else
-                {
-                    notificationTimer.Stop();
-                }
-            };
-
-            notificationTimer.Start();
+                notificationTimer.Start();
+            });
         }
 
         public TimeSpan GetDisplayTime(TaskItem? selectedTask)
