@@ -19,7 +19,6 @@ namespace TaskManager
     {
         private readonly DispatcherTimer resetCheckTimer = new();
         private readonly DispatcherTimer inactiveCheckTimer = new();
-        private static readonly TimeSpan InactiveDuration = TimeSpan.FromHours(72);
         private readonly ObservableCollection<TaskItem> inProgressTasks = new();
         private readonly ObservableCollection<TaskItem> pendingTasks = new();
         private readonly ObservableCollection<TaskItem> completedTasks = new();
@@ -28,6 +27,7 @@ namespace TaskManager
         private readonly TimerService timerService;
         private readonly TaskService taskService;
         private readonly ArchiveService archiveService;
+        private readonly InactiveTaskService inactiveTaskService;
 
         public MainWindow()
         {
@@ -48,6 +48,11 @@ namespace TaskManager
                 taskManager);
             archiveService = new ArchiveService(
                 completedTasks,
+                logger,
+                taskManager);
+            inactiveTaskService = new InactiveTaskService(
+                inProgressTasks,
+                pendingTasks,
                 logger,
                 taskManager);
             timerService.TimerTick += TimerService_TimerTick;
@@ -481,37 +486,13 @@ namespace TaskManager
 
         private void InactiveCheckTimer_Tick(object? sender, EventArgs e)
         {
-            CheckInactiveTasks();
-        }
-
-        private void CheckInactiveTasks()
-        {
-            var settings = Settings.Instance;
-            if (settings.InactiveTasksEnabled)
-            {
-                var inactiveTasks = inProgressTasks
-                    .Where(task => task.IsInactive(InactiveDuration))
-                    .ToList();
-
-                foreach (var task in inactiveTasks)
-                {
-                    inProgressTasks.Remove(task);
-                    task.SetPending();
-                    pendingTasks.Add(task);
-                    logger.LogTaskStop(task, TimeSpan.Zero);
-                }
-
-                if (inactiveTasks.Any())
-                {
-                    SaveTasks();
-                }
-            }
+            inactiveTaskService.CheckInactiveTasks();
         }
 
         private void ResetCheckTimer_Tick(object? sender, EventArgs e)
         {
             archiveService.CheckAndArchiveTasks();
-            CheckInactiveTasks();
+            inactiveTaskService.CheckInactiveTasks();
         }
 
         private void InitializeTasks()
