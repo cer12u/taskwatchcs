@@ -39,7 +39,12 @@ namespace TaskManager
                 logger
             );
             timerService = new TimerService(logger);
-            taskService = new TaskService(inProgressTasks, pendingTasks, completedTasks, logger);
+            taskService = new TaskService(
+                inProgressTasks, 
+                pendingTasks, 
+                completedTasks, 
+                logger,
+                taskManager);
             timerService.TimerTick += TimerService_TimerTick;
             timerService.TimerStateChanged += TimerService_TimerStateChanged;
 

@@ -10,16 +10,20 @@ namespace TaskManager.Services
         private readonly ObservableCollection<TaskItem> pendingTasks;
         private readonly ObservableCollection<TaskItem> completedTasks;
         private readonly TaskLogger logger;
+        private readonly TaskManagerService taskManager;
 
-        public TaskService(ObservableCollection<TaskItem> inProgressTasks,
-                           ObservableCollection<TaskItem> pendingTasks,
-                           ObservableCollection<TaskItem> completedTasks,
-                           TaskLogger logger)
+        public TaskService(
+            ObservableCollection<TaskItem> inProgressTasks,
+            ObservableCollection<TaskItem> pendingTasks,
+            ObservableCollection<TaskItem> completedTasks,
+            TaskLogger logger,
+            TaskManagerService taskManager)
         {
             this.inProgressTasks = inProgressTasks;
             this.pendingTasks = pendingTasks;
             this.completedTasks = completedTasks;
             this.logger = logger;
+            this.taskManager = taskManager;
         }
 
         public void AddTask(TaskItem task)
@@ -91,7 +95,7 @@ namespace TaskManager.Services
 
         private void SaveTasks()
         {
-            var result = new TaskManagerService(inProgressTasks, pendingTasks, completedTasks, logger).SaveTasks();
+            var result = taskManager.SaveTasks();
             if (!result.Success)
             {
                 logger.LogError("タスクの保存中にエラーが発生しました", result.Exception);
