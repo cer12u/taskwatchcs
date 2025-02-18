@@ -38,6 +38,19 @@ namespace TaskManager.Services
             }
         }
 
+        public T ExecuteSafe<T>(string operation, Func<T> action)
+        {
+            try
+            {
+                return action();
+            }
+            catch (Exception ex)
+            {
+                HandleException(operation, ex);
+                throw;
+            }
+        }
+
         private void ShowErrorMessage(string message, Exception? ex = null)
         {
             var details = ex != null ? $"\n\n詳細: {ex.Message}" : "";

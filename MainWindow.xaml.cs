@@ -30,6 +30,9 @@ namespace TaskManager
         private readonly InactiveTaskService inactiveTaskService;
         private readonly ExceptionHandlingService exceptionHandler;
         private readonly SettingsService settingsService;
+        private readonly InteractionService interactionService;
+        private readonly UIUpdateService uiUpdateService;
+        private readonly DialogService dialogService;
 
         public MainWindow()
         {
@@ -37,6 +40,9 @@ namespace TaskManager
             logger = new TaskLogger();
             exceptionHandler = new ExceptionHandlingService(logger);
             settingsService = new SettingsService(logger);
+            interactionService = new InteractionService(exceptionHandler);
+            uiUpdateService = new UIUpdateService(exceptionHandler);
+            dialogService = new DialogService(exceptionHandler, logger);
             taskManager = new TaskManagerService(
                 inProgressTasks,
                 pendingTasks,
@@ -118,18 +124,12 @@ namespace TaskManager
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Escape)
-            {
-                e.Handled = true;
-            }
+            interactionService.HandlePreviewKeyDown(e);
         }
 
         private void ListBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Escape)
-            {
-                e.Handled = true;
-            }
+            interactionService.HandlePreviewKeyDown(e);
         }
 
         private void InitializeResetTimer()
@@ -161,27 +161,18 @@ namespace TaskManager
 
         private void UpdateDisplayTime(TimeSpan time)
         {
-            StopwatchDisplay.Text = time.ToString(@"hh\:mm\:ss");
-            StopwatchMilliseconds.Text = $".{(time.Milliseconds / 100)}";
+            uiUpdateService.UpdateDisplayTime(StopwatchDisplay, StopwatchMilliseconds, time);
         }
 
         private void UpdateTimerControls()
         {
             var selectedTask = GetSelectedTask();
-            bool canStart = selectedTask == null || selectedTask.Status == TaskStatus.InProgress;
-            
-            if (selectedTask == timerService.ActiveTask && timerService.IsRunning)
-            {
-                StartStopButton.Content = "停止";
-                StartStopButton.Style = FindResource("DangerButton") as Style;
-            }
-            else
-            {
-                StartStopButton.Content = "開始";
-                StartStopButton.Style = FindResource("SuccessButton") as Style;
-            }
-            
-            StartStopButton.IsEnabled = !timerService.IsRunning || canStart;
+            uiUpdateService.UpdateTimerControls(
+                StartStopButton,
+                selectedTask,
+                timerService.ActiveTask,
+                timerService.IsRunning,
+                Resources);
         }
 
         private void StartStopButton_Click(object sender, RoutedEventArgs e)
@@ -208,12 +199,7 @@ namespace TaskManager
         {
             if (sender is ListBox listBox)
             {
-                var item = listBox.InputHitTest(e.GetPosition(listBox));
-                if (item == listBox)
-                {
-                    listBox.SelectedItem = null;
-                    e.Handled = true;
-                }
+                interactionService.HandleListBoxMouseDown(listBox, e);
             }
         }
 
@@ -221,11 +207,7 @@ namespace TaskManager
         {
             if (sender is ListBox listBox)
             {
-                var item = listBox.InputHitTest(e.GetPosition(listBox));
-                if (item == listBox)
-                {
-                    e.Handled = true;
-                }
+                interactionService.HandleListBoxPreviewMouseDown(listBox, e);
             }
         }
 
@@ -233,14 +215,7 @@ namespace TaskManager
         {
             if (sender is ListBox listBox)
             {
-                if (listBox != InProgressList) InProgressList.SelectedItem = null;
-                if (listBox != PendingList) PendingList.SelectedItem = null;
-                if (listBox != CompletedList) CompletedList.SelectedItem = null;
-
-                if (e.AddedItems.Count == 0)
-                {
-                    listBox.SelectedItem = null;
-                }
+                interactionService.HandleListSelectionChanged(listBox, InProgressList, PendingList, CompletedList, e);
 
                 // タスクが切り替わった場合、タイマーを停止
                 if (e.RemovedItems.Count > 0 && timerService.IsRunning)
@@ -273,38 +248,16 @@ namespace TaskManager
 
                 if (selectedTask != null)
                 {
-                    logger.LogTrace($"タスク編集開始: {selectedTask.Name}");
-                    logger.LogTrace($"編集前の値: EstimatedTime={selectedTask.EstimatedTime}, ElapsedTime={selectedTask.ElapsedTime}, Priority={selectedTask.Priority}");
-
-                    var dialog = new TaskEditDialog(
-                        selectedTask.Name,
-                        selectedTask.Memo ?? "",
-                        selectedTask.EstimatedTime,
-                        selectedTask.ElapsedTime,
-                        selectedTask.Priority)
+                    if (dialogService.ShowTaskEditDialog(this, selectedTask, out var result) && result != null)
                     {
-                        Owner = this
-                    };
-
-                    if (dialog.ShowDialog() == true && dialog.TaskName != null)
-                    {
-                        logger.LogTrace($"タスク編集の保存: {dialog.TaskName}");
-                        logger.LogTrace($"変更後の値: EstimatedTime={dialog.EstimatedTime}, ElapsedTime={dialog.ElapsedTime}, Priority={dialog.Priority}");
-
-                        selectedTask.Name = dialog.TaskName;
-                        selectedTask.Memo = dialog.Memo ?? "";
-                        selectedTask.EstimatedTime = dialog.EstimatedTime;
-                        selectedTask.ElapsedTime = dialog.ElapsedTime;
-                        selectedTask.Priority = dialog.Priority;
+                        selectedTask.Name = result.Name;
+                        selectedTask.Memo = result.Memo;
+                        selectedTask.EstimatedTime = result.EstimatedTime;
+                        selectedTask.ElapsedTime = result.ElapsedTime;
+                        selectedTask.Priority = result.Priority;
                         SaveTasks();
 
-                        InProgressList.Items.Refresh();
-                        PendingList.Items.Refresh();
-                        CompletedList.Items.Refresh();
-                    }
-                    else
-                    {
-                        logger.LogTrace("タスク編集がキャンセルされました");
+                        interactionService.RefreshLists(InProgressList, PendingList, CompletedList);
                     }
                 }
             });
@@ -312,17 +265,13 @@ namespace TaskManager
 
         private TaskItem? GetSelectedTask()
         {
-            return InProgressList.SelectedItem as TaskItem ??
-                   PendingList.SelectedItem as TaskItem ??
-                   CompletedList.SelectedItem as TaskItem;
+            return interactionService.GetSelectedTask(InProgressList, PendingList, CompletedList);
         }
 
         private void UpdateCurrentTaskDisplay()
         {
             var currentTask = GetSelectedTask();
-            CurrentTaskName.Text = currentTask != null 
-                ? $"選択タスク: {currentTask.Name}"
-                : "選択タスク: その他";
+            uiUpdateService.UpdateCurrentTaskDisplay(CurrentTaskName, currentTask);
         }
 
         private void DeleteTask_Click(object sender, RoutedEventArgs e)
@@ -372,9 +321,7 @@ namespace TaskManager
 
         private void DeselectTask_Click(object sender, RoutedEventArgs e)
         {
-            InProgressList.SelectedItem = null;
-            PendingList.SelectedItem = null;
-            CompletedList.SelectedItem = null;
+            interactionService.DeselectAllTasks(InProgressList, PendingList, CompletedList);
         }
 
         private void AddTask_Click(object sender, RoutedEventArgs e)
@@ -384,22 +331,15 @@ namespace TaskManager
                 timerService.Stop(inProgressTasks);
             }
 
-            var inputWindow = new TaskInputWindow { Owner = this };
-
-            if (inputWindow.ShowDialog() == true && inputWindow.CreatedTask != null)
+            if (dialogService.ShowTaskInputDialog(this, out var createdTask) && createdTask != null)
             {
-                taskService.AddTask(inputWindow.CreatedTask);
+                taskService.AddTask(createdTask);
             }
         }
 
         private void OpenSettings_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new SettingsDialog
-            {
-                Owner = this
-            };
-
-            if (dialog.ShowDialog() == true)
+            if (dialogService.ShowSettingsDialog(this))
             {
                 archiveService.CheckAndArchiveTasks();
             }
@@ -455,7 +395,7 @@ namespace TaskManager
             var result = taskManager.SaveTasks();
             if (result.Success)
             {
-                MessageBox.Show("タスクを保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                uiUpdateService.ShowSuccessMessage("保存完了", "タスクを保存しました。");
             }
             else
             {
@@ -470,7 +410,7 @@ namespace TaskManager
             var result = taskManager.LoadTasks();
             if (result.Success)
             {
-                MessageBox.Show("タスクを読み込みました。", "読み込み完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                uiUpdateService.ShowSuccessMessage("読み込み完了", "タスクを読み込みました。");
             }
             else
             {
@@ -520,9 +460,13 @@ namespace TaskManager
 
         private void InitializeTasks()
         {
-            InProgressList.ItemsSource = inProgressTasks;
-            PendingList.ItemsSource = pendingTasks;
-            CompletedList.ItemsSource = completedTasks;
+            uiUpdateService.InitializeListBoxSources(
+                InProgressList,
+                PendingList,
+                CompletedList,
+                inProgressTasks,
+                pendingTasks,
+                completedTasks);
         }
     }
 }
