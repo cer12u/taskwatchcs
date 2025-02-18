@@ -33,6 +33,7 @@ namespace TaskManager
         private readonly InteractionService interactionService;
         private readonly UIUpdateService uiUpdateService;
         private readonly DialogService dialogService;
+        private readonly NotificationService notificationService;
 
         public MainWindow()
         {
@@ -43,13 +44,14 @@ namespace TaskManager
             interactionService = new InteractionService(exceptionHandler);
             uiUpdateService = new UIUpdateService(exceptionHandler);
             dialogService = new DialogService(exceptionHandler, logger);
+            notificationService = new NotificationService(settingsService, logger);
             taskManager = new TaskManagerService(
                 inProgressTasks,
                 pendingTasks,
                 completedTasks,
                 logger
             );
-            timerService = new TimerService(logger);
+            timerService = new TimerService(logger, notificationService);
             taskService = new TaskService(
                 inProgressTasks, 
                 pendingTasks, 
@@ -357,17 +359,7 @@ namespace TaskManager
         {
             exceptionHandler.SafeExecute("アプリケーション終了処理", () =>
             {
-                try
-                {
-                    // 通知をクリア
-                    ToastNotificationManagerCompat.History.Clear();
-                    // アプリケーションと関連付けられた通知も完全にクリア
-                    ToastNotificationManagerCompat.Uninstall();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError("通知のクリア中にエラーが発生", ex);
-                }
+                notificationService.ClearAllNotifications();
 
                 // タイマーを停止
                 if (timerService.IsRunning)

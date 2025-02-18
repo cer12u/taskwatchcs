@@ -13,14 +13,15 @@ namespace TaskManager.Services
         private readonly TaskLogger logger;
         private readonly TaskItem otherTask;
         private readonly ExceptionHandlingService exceptionHandler;
-        private string? currentNotificationId = null;
+        private readonly NotificationService notificationService;
 
         public event EventHandler<TimeSpan>? TimerTick;
         public event EventHandler? TimerStateChanged;
 
-        public TimerService(TaskLogger logger)
+        public TimerService(TaskLogger logger, NotificationService notificationService)
         {
             this.logger = logger;
+            this.notificationService = notificationService;
             this.exceptionHandler = new ExceptionHandlingService(logger);
             otherTask = new TaskItem("その他", "", TimeSpan.Zero, TaskPriority.Medium);
             InitializeTimer();
@@ -59,7 +60,7 @@ namespace TaskManager.Services
                 if (selectedTask != null)
                 {
                     selectedTask.IsProcessing = true;
-                    ScheduleNotification(selectedTask);
+                    notificationService.ScheduleTaskNotification(selectedTask, true);
                     logger.LogTaskStart(selectedTask);
                 }
                 else
@@ -78,12 +79,7 @@ namespace TaskManager.Services
                 if (timerState.IsRunning)
                 {
                     timer.Stop();
-
-                    if (currentNotificationId != null)
-                    {
-                        ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                        currentNotificationId = null;
-                    }
+                    notificationService.ClearCurrentNotification();
 
                     var runningTask = timerState.ActiveTask;
                     var elapsed = DateTime.Now - timerState.StartTime;
@@ -110,12 +106,7 @@ namespace TaskManager.Services
                 if (timerState.IsRunning)
                 {
                     timer.Stop();
-
-                    if (currentNotificationId != null)
-                    {
-                        ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                        currentNotificationId = null;
-                    }
+                    notificationService.ClearCurrentNotification();
 
                     var runningTask = timerState.ActiveTask;
                     var elapsed = DateTime.Now - timerState.StartTime;
@@ -144,51 +135,6 @@ namespace TaskManager.Services
 
                     TimerStateChanged?.Invoke(this, EventArgs.Empty);
                 }
-            });
-        }
-
-        private void ScheduleNotification(TaskItem task)
-        {
-            exceptionHandler.SafeExecute("通知のスケジュール", () =>
-            {
-                if (currentNotificationId != null)
-                {
-                    ToastNotificationManagerCompat.History.Remove(currentNotificationId);
-                    currentNotificationId = null;
-                }
-
-                var notificationId = Guid.NewGuid().ToString();
-                currentNotificationId = notificationId;
-
-                var builder = new ToastContentBuilder()
-                    .AddText($"タスク: {task.Name}")
-                    .AddText("開始から30分が経過しました。")
-                    .SetToastScenario(ToastScenario.Default);
-
-                if (task.ElapsedTime > task.EstimatedTime)
-                {
-                    builder.AddText($"予定時間を{(task.ElapsedTime - task.EstimatedTime).TotalMinutes:0}分超過しています。");
-                }
-
-                var notificationTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMinutes(30)
-                };
-
-                notificationTimer.Tick += (s, e) =>
-                {
-                    if (timerState.IsRunning && timerState.ActiveTask == task)
-                    {
-                        builder.Show();
-                        notificationTimer.Stop();
-                    }
-                    else
-                    {
-                        notificationTimer.Stop();
-                    }
-                };
-
-                notificationTimer.Start();
             });
         }
 
