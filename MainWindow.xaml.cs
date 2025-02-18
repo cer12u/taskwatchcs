@@ -43,7 +43,7 @@ namespace TaskManager
             settingsService = new SettingsService(logger);
             interactionService = new InteractionService(exceptionHandler);
             uiUpdateService = new UIUpdateService(exceptionHandler);
-            dialogService = new DialogService(exceptionHandler, logger);
+            dialogService = new DialogService(exceptionHandler, logger, settingsService);
             notificationService = new NotificationService(settingsService, logger);
             taskManager = new TaskManagerService(
                 inProgressTasks,

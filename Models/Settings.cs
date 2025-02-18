@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 
-namespace TaskManager
+namespace TaskManager.Models
 {
     public class Settings
     {
@@ -16,5 +16,20 @@ namespace TaskManager
 
         [JsonConstructor]
         public Settings() { }
+
+        public Settings Clone()
+        {
+            return new Settings
+            {
+                InactiveTasksEnabled = this.InactiveTasksEnabled,
+                AutoArchiveEnabled = this.AutoArchiveEnabled,
+                LastResetTime = this.LastResetTime,
+                IsTopMost = this.IsTopMost,
+                ResetTime = this.ResetTime,
+                NotificationsEnabled = this.NotificationsEnabled,
+                NotificationInterval = this.NotificationInterval,
+                EstimatedTimeNotificationEnabled = this.EstimatedTimeNotificationEnabled
+            };
+        }
     }
 }

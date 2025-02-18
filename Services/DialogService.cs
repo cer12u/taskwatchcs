@@ -16,11 +16,13 @@ namespace TaskManager.Services
     {
         private readonly ExceptionHandlingService exceptionHandler;
         private readonly TaskLogger logger;
+        private readonly SettingsService settingsService;
 
-        public DialogService(ExceptionHandlingService exceptionHandler, TaskLogger logger)
+        public DialogService(ExceptionHandlingService exceptionHandler, TaskLogger logger, SettingsService settingsService)
         {
             this.exceptionHandler = exceptionHandler;
             this.logger = logger;
+            this.settingsService = settingsService;
         }
 
         public bool? ShowDialog(Window dialog)
@@ -93,7 +95,7 @@ namespace TaskManager.Services
 
         public bool ShowSettingsDialog(Window owner)
         {
-            var dialog = new SettingsDialog { Owner = owner };
+            var dialog = new SettingsDialog(settingsService) { Owner = owner };
             return dialog.ShowDialog() == true;
         }
     }

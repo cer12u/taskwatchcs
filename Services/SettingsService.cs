@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using TaskManager.Models;
 
 namespace TaskManager.Services
 {
@@ -10,55 +11,50 @@ namespace TaskManager.Services
         private readonly ExceptionHandlingService exceptionHandler;
         private readonly string settingsPath;
         private Settings? cachedSettings;
+        private readonly JsonSerializerOptions jsonOptions;
+        private static readonly TimeSpan DefaultResetCheckInterval = TimeSpan.FromMinutes(1);
+
+        public event EventHandler? SettingsChanged;
 
         public SettingsService(TaskLogger logger, string? customSettingsPath = null)
         {
             this.logger = logger;
             this.exceptionHandler = new ExceptionHandlingService(logger);
-            this.settingsPath = customSettingsPath ?? "settings.json";
-        }
+            this.settingsPath = customSettingsPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+            this.jsonOptions = new JsonSerializerOptions { WriteIndented = true };
 
-        private T ExecuteSafe<T>(string operation, Func<T> action)
-        {
-            try
-            {
-                return action();
-            }
-            catch (Exception ex)
-            {
-                exceptionHandler.HandleException(operation, ex);
-                throw;
-            }
+            // 設定ファイルのディレクトリを確実に作成
+            Directory.CreateDirectory(Path.GetDirectoryName(settingsPath) ?? "");
         }
 
         public Settings GetSettings()
         {
-            return ExecuteSafe("設定の読み込み", () =>
+            return exceptionHandler.ExecuteSafe("設定の読み込み", () =>
             {
                 if (cachedSettings != null)
                 {
-                    return cachedSettings;
+                    return cachedSettings.Clone();
                 }
 
                 if (!File.Exists(settingsPath))
                 {
                     cachedSettings = new Settings();
                     SaveSettings(cachedSettings);
-                    return cachedSettings;
+                    return cachedSettings.Clone();
                 }
 
                 try
                 {
                     var json = File.ReadAllText(settingsPath);
                     cachedSettings = JsonSerializer.Deserialize<Settings>(json) ?? new Settings();
-                    return cachedSettings;
+                    return cachedSettings.Clone();
                 }
                 catch (Exception ex)
                 {
                     logger.LogError("設定ファイルの読み込みに失敗しました", ex);
                     cachedSettings = new Settings();
                     SaveSettings(cachedSettings);
-                    return cachedSettings;
+                    return cachedSettings.Clone();
                 }
             });
         }
@@ -67,24 +63,30 @@ namespace TaskManager.Services
         {
             exceptionHandler.SafeExecute("設定の保存", () =>
             {
-                var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+                var json = JsonSerializer.Serialize(settings, jsonOptions);
                 File.WriteAllText(settingsPath, json);
-                cachedSettings = settings;
+                cachedSettings = settings.Clone();
+                SettingsChanged?.Invoke(this, EventArgs.Empty);
             });
         }
 
         public string GetArchiveFilePath(DateTime date)
         {
-            return Path.Combine(
+            var archivePath = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
-                "archives",
+                "archives"
+            );
+            Directory.CreateDirectory(archivePath);
+            
+            return Path.Combine(
+                archivePath,
                 $"completed_tasks_{date:yyyyMMdd}.json"
             );
         }
 
         public bool NeedsReset()
         {
-            return ExecuteSafe("リセット状態の確認", () =>
+            return exceptionHandler.ExecuteSafe("リセット状態の確認", () =>
             {
                 var settings = GetSettings();
                 if (settings.LastResetTime == null)
@@ -94,9 +96,15 @@ namespace TaskManager.Services
 
                 var now = DateTime.Now;
                 var lastReset = settings.LastResetTime.Value;
-                
-                // 日付が変わっているかチェック
-                return lastReset.Date < now.Date;
+                var nextResetTime = lastReset.Date.Add(settings.ResetTime);
+
+                // 前回のリセット時刻から次のリセット時刻を超えているかチェック
+                if (now >= nextResetTime)
+                {
+                    return true;
+                }
+
+                return false;
             });
         }
 
@@ -108,6 +116,29 @@ namespace TaskManager.Services
                 settings.LastResetTime = DateTime.Now;
                 SaveSettings(settings);
             });
+        }
+
+        public void UpdateSetting<T>(string propertyName, T value)
+        {
+            exceptionHandler.SafeExecute($"設定の更新: {propertyName}", () =>
+            {
+                var settings = GetSettings();
+                var property = typeof(Settings).GetProperty(propertyName);
+                if (property != null && property.CanWrite)
+                {
+                    property.SetValue(settings, value);
+                    SaveSettings(settings);
+                }
+                else
+                {
+                    throw new ArgumentException($"設定プロパティ '{propertyName}' が見つからないか、書き込みができません。");
+                }
+            });
+        }
+
+        public TimeSpan GetResetCheckInterval()
+        {
+            return DefaultResetCheckInterval;
         }
     }
 }
