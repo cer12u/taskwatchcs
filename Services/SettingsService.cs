@@ -8,72 +8,105 @@ namespace TaskManager.Services
     {
         private readonly TaskLogger logger;
         private readonly ExceptionHandlingService exceptionHandler;
-        private readonly Settings settings;
+        private readonly string settingsPath;
+        private Settings? cachedSettings;
 
-        public Settings Settings => settings;
-
-        public SettingsService(TaskLogger logger)
+        public SettingsService(TaskLogger logger, string? customSettingsPath = null)
         {
             this.logger = logger;
             this.exceptionHandler = new ExceptionHandlingService(logger);
-            this.settings = Settings.Instance;
+            this.settingsPath = customSettingsPath ?? "settings.json";
         }
 
-        public bool AutoArchiveEnabled => settings.AutoArchiveEnabled;
-        public bool InactiveTasksEnabled => settings.InactiveTasksEnabled;
-        public DateTime LastResetTime => settings.LastResetTime;
+        private T ExecuteSafe<T>(string operation, Func<T> action)
+        {
+            try
+            {
+                return action();
+            }
+            catch (Exception ex)
+            {
+                exceptionHandler.HandleException(operation, ex);
+                throw;
+            }
+        }
+
+        public Settings GetSettings()
+        {
+            return ExecuteSafe("設定の読み込み", () =>
+            {
+                if (cachedSettings != null)
+                {
+                    return cachedSettings;
+                }
+
+                if (!File.Exists(settingsPath))
+                {
+                    cachedSettings = new Settings();
+                    SaveSettings(cachedSettings);
+                    return cachedSettings;
+                }
+
+                try
+                {
+                    var json = File.ReadAllText(settingsPath);
+                    cachedSettings = JsonSerializer.Deserialize<Settings>(json) ?? new Settings();
+                    return cachedSettings;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("設定ファイルの読み込みに失敗しました", ex);
+                    cachedSettings = new Settings();
+                    SaveSettings(cachedSettings);
+                    return cachedSettings;
+                }
+            });
+        }
+
+        public void SaveSettings(Settings settings)
+        {
+            exceptionHandler.SafeExecute("設定の保存", () =>
+            {
+                var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(settingsPath, json);
+                cachedSettings = settings;
+            });
+        }
+
+        public string GetArchiveFilePath(DateTime date)
+        {
+            return Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "archives",
+                $"completed_tasks_{date:yyyyMMdd}.json"
+            );
+        }
+
+        public bool NeedsReset()
+        {
+            return ExecuteSafe("リセット状態の確認", () =>
+            {
+                var settings = GetSettings();
+                if (settings.LastResetTime == null)
+                {
+                    return true;
+                }
+
+                var now = DateTime.Now;
+                var lastReset = settings.LastResetTime.Value;
+                
+                // 日付が変わっているかチェック
+                return lastReset.Date < now.Date;
+            });
+        }
 
         public void UpdateLastResetTime()
         {
             exceptionHandler.SafeExecute("最終リセット時刻の更新", () =>
             {
-                settings.UpdateLastResetTime();
-                Save();
-            });
-        }
-
-        public bool NeedsReset()
-        {
-            return settings.NeedsReset();
-        }
-
-        public string GetArchiveFilePath(DateTime date)
-        {
-            return Settings.GetArchiveFilePath(date);
-        }
-
-        public void Save()
-        {
-            exceptionHandler.SafeExecute("設定の保存", () =>
-            {
-                var json = JsonSerializer.Serialize(settings);
-                File.WriteAllText("settings.json", json);
-            });
-        }
-
-        public void LoadSettings()
-        {
-            exceptionHandler.SafeExecute("設定の読み込み", () =>
-            {
-                if (File.Exists("settings.json"))
-                {
-                    var json = File.ReadAllText("settings.json");
-                    var loadedSettings = JsonSerializer.Deserialize<Settings>(json);
-                    if (loadedSettings != null)
-                    {
-                        settings.LoadFrom(loadedSettings);
-                    }
-                }
-            });
-        }
-
-        public void UpdateSettings(bool autoArchiveEnabled, bool inactiveTasksEnabled)
-        {
-            exceptionHandler.SafeExecute("設定の更新", () =>
-            {
-                settings.AutoArchiveEnabled = autoArchiveEnabled;
-                settings.InactiveTasksEnabled = inactiveTasksEnabled;
-                Save();
+                var settings = GetSettings();
+                settings.LastResetTime = DateTime.Now;
+                SaveSettings(settings);
             });
         }
     }

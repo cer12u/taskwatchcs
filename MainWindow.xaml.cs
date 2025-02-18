@@ -80,7 +80,6 @@ namespace TaskManager
 
         private void InitializeApplication()
         {
-            settingsService.LoadSettings();
             InitializeResetTimer();
             InitializeInactiveCheckTimer();
             InitializeTasks();
@@ -187,7 +186,7 @@ namespace TaskManager
 
         private void StartStopButton_Click(object sender, RoutedEventArgs e)
         {
-            exceptionHandler.SafeExecute("タイマー操作", () =>
+            try
             {
                 if (timerService.IsRunning)
                 {
@@ -198,7 +197,11 @@ namespace TaskManager
                 {
                     timerService.Start(GetSelectedTask());
                 }
-            });
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void ListBox_MouseDown(object sender, MouseButtonEventArgs e)
@@ -391,7 +394,7 @@ namespace TaskManager
 
         private void OpenSettings_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new SettingsDialog(settingsService)
+            var dialog = new SettingsDialog
             {
                 Owner = this
             };
@@ -404,6 +407,9 @@ namespace TaskManager
 
         private void TopMostMenuItem_Click(object sender, RoutedEventArgs e)
         {
+            var settings = settingsService.GetSettings();
+            settings.IsTopMost = TopMostMenuItem.IsChecked;
+            settingsService.SaveSettings(settings);
             Topmost = TopMostMenuItem.IsChecked;
         }
 
@@ -435,7 +441,9 @@ namespace TaskManager
                 var result = taskManager.SaveTasks();
                 if (!result.Success)
                 {
-                    throw new TaskManagerException("タスクの保存に失敗しました", result.Exception);
+                    throw new TaskManagerException(
+                        "タスクの保存に失敗しました", 
+                        result.Exception ?? new Exception(result.Message));
                 }
                 
                 archiveService.CheckAndArchiveTasks();
@@ -453,7 +461,7 @@ namespace TaskManager
             {
                 exceptionHandler.HandleException(
                     "タスクの保存",
-                    new TaskManagerException($"タスクの保存中にエラーが発生しました。\n{result.Message}", result.Exception));
+                    new TaskManagerException("タスクの保存中にエラーが発生しました。", result.Exception ?? new Exception(result.Message)));
             }
         }
 
@@ -468,7 +476,7 @@ namespace TaskManager
             {
                 exceptionHandler.HandleException(
                     "タスクの読み込み",
-                    new TaskManagerException($"タスクの読み込み中にエラーが発生しました。\n{result.Message}", result.Exception));
+                    new TaskManagerException("タスクの読み込み中にエラーが発生しました。", result.Exception ?? new Exception(result.Message)));
             }
         }
 
@@ -479,7 +487,7 @@ namespace TaskManager
             {
                 exceptionHandler.HandleException(
                     "タスクの保存",
-                    new TaskManagerException($"タスクの保存中にエラーが発生しました。\n{result.Message}", result.Exception));
+                    new TaskManagerException("タスクの保存中にエラーが発生しました。", result.Exception ?? new Exception(result.Message)));
             }
         }
 
@@ -490,8 +498,13 @@ namespace TaskManager
             {
                 exceptionHandler.HandleException(
                     "タスクの読み込み",
-                    new TaskManagerException($"タスクの読み込み中にエラーが発生しました。\n{result.Message}", result.Exception));
+                    new TaskManagerException("タスクの読み込み中にエラーが発生しました。", result.Exception ?? new Exception(result.Message)));
             }
+
+            // 設定の復元
+            var settings = settingsService.GetSettings();
+            TopMostMenuItem.IsChecked = settings.IsTopMost;
+            Topmost = settings.IsTopMost;
         }
 
         private void InactiveCheckTimer_Tick(object? sender, EventArgs e)

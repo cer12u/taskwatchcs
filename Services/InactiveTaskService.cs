@@ -25,15 +25,16 @@ namespace TaskManager.Services
             this.pendingTasks = pendingTasks;
             this.logger = logger;
             this.taskManager = taskManager;
-            this.exceptionHandler = new ExceptionHandlingService(logger);
             this.settingsService = settingsService;
+            this.exceptionHandler = new ExceptionHandlingService(logger);
         }
 
         public void CheckInactiveTasks()
         {
             exceptionHandler.SafeExecute("非アクティブタスクのチェック", () =>
             {
-                if (settingsService.InactiveTasksEnabled)
+                var settings = settingsService.GetSettings();
+                if (settings.InactiveTasksEnabled)
                 {
                     var inactiveTasks = inProgressTasks
                         .Where(task => task.IsInactive(InactiveDuration))

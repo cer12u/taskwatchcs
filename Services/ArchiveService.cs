@@ -23,8 +23,8 @@ namespace TaskManager.Services
             this.completedTasks = completedTasks;
             this.logger = logger;
             this.taskManager = taskManager;
-            this.exceptionHandler = new ExceptionHandlingService(logger);
             this.settingsService = settingsService;
+            this.exceptionHandler = new ExceptionHandlingService(logger);
         }
 
         public void CheckAndArchiveTasks()
@@ -33,7 +33,8 @@ namespace TaskManager.Services
             {
                 if (settingsService.NeedsReset())
                 {
-                    if (settingsService.AutoArchiveEnabled)
+                    var settings = settingsService.GetSettings();
+                    if (settings.AutoArchiveEnabled)
                     {
                         ArchiveCompletedTasks(DateTime.Now.AddDays(-1));
                     }
