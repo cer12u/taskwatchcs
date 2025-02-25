@@ -10,6 +10,7 @@ namespace TaskManager.Services
         private readonly TaskLogger logger;
         private readonly ExceptionHandlingService exceptionHandler;
         private string? currentNotificationId;
+        private DispatcherTimer? currentNotificationTimer;
 
         public NotificationService(
             SettingsService settingsService,
@@ -40,7 +41,7 @@ namespace TaskManager.Services
             exceptionHandler.SafeExecute("通知のスケジュール", () =>
             {
                 var settings = settingsService.GetSettings();
-                if (!settings.NotificationsEnabled)
+                if (!settings.NotificationsEnabled || !isRunning)
                 {
                     return;
                 }
@@ -60,34 +61,37 @@ namespace TaskManager.Services
                     builder.AddText($"予定時間を{(task.ElapsedTime - task.EstimatedTime).TotalMinutes:0}分超過しています。");
                 }
 
-                var notificationTimer = new DispatcherTimer
+                currentNotificationTimer = new DispatcherTimer
                 {
                     Interval = TimeSpan.FromMinutes(settings.NotificationInterval)
                 };
 
-                notificationTimer.Tick += (s, e) =>
+                currentNotificationTimer.Tick += (s, e) =>
                 {
-                    if (isRunning)
-                    {
-                        builder.Show();
-                        notificationTimer.Stop();
-                    }
-                    else
-                    {
-                        notificationTimer.Stop();
-                    }
+                    builder.Show();
+                    StopCurrentTimer();
                 };
 
-                notificationTimer.Start();
+                currentNotificationTimer.Start();
             });
         }
 
         public void ClearCurrentNotification()
         {
+            StopCurrentTimer();
             if (currentNotificationId != null)
             {
                 ToastNotificationManagerCompat.History.Remove(currentNotificationId);
                 currentNotificationId = null;
+            }
+        }
+
+        private void StopCurrentTimer()
+        {
+            if (currentNotificationTimer != null)
+            {
+                currentNotificationTimer.Stop();
+                currentNotificationTimer = null;
             }
         }
     }
